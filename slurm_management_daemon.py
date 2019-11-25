@@ -3,24 +3,16 @@ import os
 from os import listdir
 import time
 import subprocess
+import crun_lib
 
 
-username = getpass.getuser()
-curr_dir = os.getcwd()
-dirs = os.path.split(curr_dir)
-
-if (dirs[1] != "code"):
-    print("Not launched from a valid crun tree")
-    exit(1)
-print(dirs)
-print(username)
-
-crun_root = dirs[0]
+crun_lib.setup_crun_root()
+crun_lib.verify_crun_directory_structure()
 
 while True:
-    for f in listdir(os.path.join(crun_root,"working_dir",username)):
+    for f in listdir(os.path.join(crun_lib.crun_root_path,"working_dir",crun_lib.crun_current_username)):
         print(f)
-        project_dir = os.path.join(crun_root,"working_dir",username,f)
+        project_dir = os.path.join(crun_lib.crun_root_path,"working_dir",crun_lib.crun_current_username,f)
         if os.path.isdir(project_dir):
             
             print("Polling " + project_dir)
