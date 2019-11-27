@@ -23,17 +23,17 @@ def submit_job(job_file):
     f = open("crun.jobid", "a")
     f.write(str(result.group(1)))
     f.close()
-    repo.remotes.origin.push()
-    repo.git.add(os.path.join(file_split[0],"crun.jobid"))
-    repo.index.commit("Comitting jobid for job: " + str(file_split[1]))
-    repo.remotes.origin.push()
+    jobs_repo.remotes.origin.push()
+    jobs_repo.git.add(os.path.join(file_split[0],"crun.jobid"))
+    jobs_repo.index.commit("Comitting jobid for job: " + str(file_split[1]))
+    jobs_repo.remotes.origin.push()
     print(result.group(1))
     
     return
 
 def commit_last_processed_commit():
     f = open(os.path.join(repo_jobs_dir,"last_processed_commit.sha"), "w")
-    f.write(str(repo.heads.master.commit))
+    f.write(str(jobs_repo.heads.master.commit))
     f.close()
     jobs_repo.git.add(os.path.join(repo_jobs_dir,"last_processed_commit.sha"))
     jobs_repo.index.commit("Processed job submissions up to commit " + str(jobs_repo.heads.master.commit))
@@ -79,7 +79,7 @@ if os.path.isfile(os.path.join(repo_jobs_dir,"last_processed_commit.sha")):
             most_recent_head = cm
         print("Processing commit " + str(cm))
         for f in cm.stats.files:
-            if "submit.sh" in f:
+            if f.endswith("crun.sh"):
                 submit_job(f)
                 launched_job = True
     if launched_job:
