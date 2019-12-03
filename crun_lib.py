@@ -1,10 +1,11 @@
 import os
 import getpass
+import inspect
 
 def setup_crun_root():
     global crun_root_path
     global crun_current_username
-    currentDirectory = os.getcwd()
+    currentDirectory = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
     dirs = os.path.split(currentDirectory)
 
     if (dirs[1] != "code"):
