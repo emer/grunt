@@ -31,6 +31,10 @@ def submit_job(job_file):
     
     return
 
+def update_job(update_file):
+    #TODO: implement
+    return
+
 def commit_last_processed_commit():
     f = open(os.path.join(repo_jobs_dir,"last_processed_commit.sha"), "w")
     f.write(str(jobs_repo.heads.master.commit))
@@ -81,6 +85,9 @@ if os.path.isfile(os.path.join(repo_jobs_dir,"last_processed_commit.sha")):
         for f in cm.stats.files:
             if f.endswith("crun.sh"):
                 submit_job(f)
+                launched_job = True
+            if f.endswith("update.now"):
+                update_job(f)
                 launched_job = True
     if launched_job:
         commit_last_processed_commit()

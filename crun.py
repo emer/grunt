@@ -9,7 +9,9 @@ from subprocess import Popen, PIPE
 import shutil
 import json
 from pathlib import Path
+import crun_lib
 
+global crun_config
 
 def copy_code_files_to_jobs_dir(job_dir):
     #TODO: figure out how this gracefully failes when current directory is not a git directory
@@ -30,7 +32,7 @@ def get_next_job_id():
     print(crun_nextjob)
 
 def get_sbatch_setting(setting):
-    return crun_config["default_sbatch_settings"][setting]
+    return crun_lib.crun_config["default_sbatch_settings"][setting]
 
 def generate_crun_sh(job_dir):
     f = open(os.path.join(job_dir,'crun.sh'), 'w+')
@@ -52,13 +54,11 @@ def generate_crun_sh(job_dir):
 
 
 
-with open(os.path.join(Path.home(),"crun_data",".config.json")) as json_file:
-    crun_config = json.load(json_file)
-
+crun_lib.load_json_config()
 dirs = os.path.split(os.getcwd())
 project_name = dirs[-1]
 
-crun_project_jobs_dir = os.path.join(crun_config["crun_root_dir"],"working_dir",crun_config["crun_current_user"],project_name,"jobs")
+crun_project_jobs_dir = os.path.join(crun_lib.crun_config["crun_root_dir"],"working_dir",crun_lib.crun_config["crun_current_user"],project_name,"jobs")
 print(crun_project_jobs_dir)
     
 if len(sys.argv) < 2:
@@ -66,28 +66,53 @@ if len(sys.argv) < 2:
     exit(1)
 
 if (sys.argv[1] == "submit"):
-    try:
-        jobs_repo = Repo(crun_project_jobs_dir)
-    except Exception as e:
-        print("The directory provided is not a valid crun jobs git working directory: " + crun_project_jobs_dir + "! " + str(e))
-        exit(3)
-    print(jobs_repo)
-    jobs_repo.remotes.origin.pull()
+    crun_lib.load_jobs_repo(crun_project_jobs_dir)
+    
     get_next_job_id()
-    job_dir = os.path.join(crun_project_jobs_dir,"active","job" + crun_config["crun_current_user_short"] + str(crun_nextjob).zfill(6))
-    os.mkdir(job_dir)
-    copy_code_files_to_jobs_dir(job_dir)
-    generate_crun_sh(job_dir)
-    jobs_repo.index.commit("Comitting launch of jobid: " + str(crun_nextjob))
-    jobs_repo.remotes.origin.push()
+    new_job_dir = os.path.join(crun_project_jobs_dir,"active",crun_lib.job_number_to_jobid(crun_nextjob))
+    #TODO: catch exceptions on dir creation
+    os.mkdir(new_job_dir)
+    copy_code_files_to_jobs_dir(new_job_dir)
+    generate_crun_sh(new_job_dir)
+    crun_lib.crun_jobs_repo.index.commit("Comitting launch of jobid: " + str(crun_nextjob))
+    crun_lib.crun_jobs_repo.remotes.origin.push()
     exit(0)
 elif (sys.argv[1] == "cancel"):
     exit(0)
 elif (sys.argv[1] == "nuke"):
     exit(0)
+elif (sys.argv[1] == "archive"):
+    exit(0)
 elif(sys.argv[1] == "delete"):
     exit(0)
 elif(sys.argv[1] == "update"):
+    crun_lib.load_jobs_repo(crun_project_jobs_dir)
+    if len(sys.argv) < 3:
+        print("Updating all running jobs with the default or current update.now file")
+        #TODO: implement
+    elif len(sys.argv) == 3:
+        crun_jobid = crun_lib.job_number_to_jobid(sys.argv[2])
+        current_job_dir = os.path.join(crun_project_jobs_dir,"active",crun_jobid)
+        print(current_job_dir)
+        if (os.path.isfile(os.path.join(current_job_dir,"update.now"))):
+            f = open(os.path.join(current_job_dir,"update.now"),"a")
+            f.write("#")
+            f.flush()
+            f.close()
+        else:
+            #Updating the default files
+            f = open(os.path.join(current_job_dir,"update.now"),"a")
+            for l in crun_lib.crun_config["default_result_files"]:
+                f.write(l + "\n")
+            f.flush()
+            f.close()
+        crun_lib.crun_jobs_repo.git.add(os.path.join(current_job_dir,"update.now"))
+        crun_lib.crun_jobs_repo.index.commit("Updating files for job " + crun_jobid)
+        crun_lib.crun_jobs_repo.remotes.origin.push()
+            
+    else:
+        None
+        
     exit(0)
 else:
     print("No valid command was given")
