@@ -20,7 +20,7 @@ def copy_code_files_to_jobs_dir(job_dir):
     job_dir = os.path.join(job_dir,project_name)
     for f in p.stdout.splitlines():
         shutil.copyfile(f, os.path.join(job_dir,f))
-        jobs_repo.git.add(os.path.join(os.path.join(job_dir,f)))
+        crun_lib.crun_jobs_repo.git.add(os.path.join(os.path.join(job_dir,f)))
                           
 
 def get_next_job_id():
@@ -48,7 +48,7 @@ def generate_crun_sh(job_dir):
     f.flush()
     f.close()
     
-    jobs_repo.git.add(os.path.join(job_dir,'crun.sh'))
+    crun_lib.crun_jobs_repo.git.add(os.path.join(job_dir,'crun.sh'))
 
 
 
