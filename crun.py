@@ -138,27 +138,9 @@ def ensure_repos(projnm):
     res_wd_repo.index.commit("Initial commit for " + projnm + " project")
     res_wd_repo.remotes.origin.push()
     
-def get_sbatch_setting(setting):
-    return crun_lib.crun_config["default_sbatch_settings"][setting]
-
-def generate_crun_sh(job_dir):
-    f = open(os.path.join(job_dir,'crun.sh'), 'w+')
-    f.write("#!/bin/bash\n")
-    f.write("#SBATCH --mem=" + get_sbatch_setting("mem") + "\n")
-    f.write("#SBATCH --time=" + get_sbatch_setting("time") + "\n")
-    f.write("#SBATCH -c " + get_sbatch_setting("cpu") + "\n")
-    f.write("#SBATCH -J \"" + crun_proj + " - " + str(crun_nextjob) + "\"\n")
-    f.write("\n\n")
-    f.write("cd " + crun_proj + "\n")
-    f.write("go build\n")
-    f.write("./" + crun_proj + " tmp\n")
-    f.flush()
-    f.close()
-    
-
     
 ##########################################################    
-    
+# Running starts here
 
 if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\ncrun is the cluster run client script for running and mananging jobs via git\n")
