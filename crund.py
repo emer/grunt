@@ -1,5 +1,6 @@
 #!/usr/local/bin/python3
-# you may just need to run explicitly as python crund.py
+# run this as: 
+# nohup python crund.py
 
 # this is the outer-loop crun daemon that polls all crun working repositories
 
@@ -28,7 +29,7 @@ while True:
         print(f)
         crun_proj = os.path.join(crun_wd,f)
         if os.path.isdir(crun_proj):
-            print("Polling " + crun_proj)
+            # print("Polling " + crun_proj)
             subprocess.call(["python3","./crund_sub.py", crun_proj])
     time.sleep(10)
     

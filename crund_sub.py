@@ -7,6 +7,9 @@ import subprocess
 import sys
 import re
 
+# turn this on to see more verbose debug messages
+crun_debug = False
+
 # crun_wd is the working dir for project: ~/crun/wd/username/projname
 crun_wd = ""
 
@@ -98,13 +101,15 @@ if os.path.isfile(crun_shafn):
     f.close()
     check_for_updates = True
     launched_job = False
-    print("Begin processing commits from hash: " + last_processed_commit_hash)
+    if crun_debug:
+        print("Begin processing commits from hash: " + last_processed_commit_hash)
     last_to_head = last_processed_commit_hash + "..HEAD"
     most_recent_head = None
     for cm in crun_jobs_repo.iter_commits(rev=last_to_head):
         if most_recent_head == None:
             most_recent_head = cm
-        print("Processing commit " + str(cm))
+        if crun_debug:
+            print("Processing commit " + str(cm))
         for f in cm.stats.files:
             if f.endswith("crun.sh"):
                 submit_job(f)

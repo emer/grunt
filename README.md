@@ -10,10 +10,10 @@ In both cases you first clone the repo wherever you want:
 git clone https://github.com/emer/crun.git
 ```
 
-and install gitpython package:
+and install gitpython package -- use the `--user` option on the cluster as you typically don't have sudo write ability.
 
 ```bash
-pip3 install gitpython
+pip3 install --user gitpython
 ```
 
 ## Client side
@@ -25,19 +25,75 @@ pip3 install gitpython
 
 * You can run directly from git repo -- you don't need to run command from your project dirs.
 
-* To run daemon, just do `python3 crund.py` or however you run python3 on server.  `crund_sub.py` script must be in the same directory -- it is called for each project polling operation.
-
-* To initialize a new project directory, do:
+* To run daemon, do:
 
 ```bash
-crun.py newproj <projname>
+nohup python3 crund.py
+```
+or however you run python3 on server.  `crund_sub.py` script must be in the same directory -- it is called for each project polling operation.  The `nohup` keeps it running in the background, and you can look at nohup.out to see what's going on:
+
+```bash
+tail -f nohup.out
 ```
 
-You have to then link this directory with the client-side -- easiest to do the same command on the client and then do:
+## SSH
+
+The system uses ssh between client and server to sync the git repositories, so you need good direct ssh access.
+
+That there are handy ssh config options that will keep an ssh channel authenticated if you have an existing ssh session open:
+
+```bash
+~/.ssh/config:
+Host blogin01.rc* login.rc*
+ControlMaster auto
+ControlPath ~/.ssh/sockets/%r@%h:%p
+```
+
+where `blogin01.rc*` is the start of server host names that you want to do this for.
+
+Then you can do `screen` locally on your client, ssh into your server, and then kill the terminal -- the screen keeps that session running in the background indefinitely.  use `screen -R` to reconnect to an existing screen session.
+
+# New projects
+
+Each project has its own github repositories on the server, and working copies on the client, that contain all the files for a given project.  These repositories are (wd = working directory):
+
+* `~/crun/wd/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
+
+* `~/crun/wd/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+
+The `projname` is the directory name where you execute the `crun.py submit` job -- i.e., the directory for your simulation.
+
+The server has the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
+
+* To initialize a new project on the server, run this command (can be done anywhere):
+
+```bash
+crun.py newproj projname
+```
+
+* Once that completes, then on the client, do:
+
+```bash
+crun.py newproj projname username@server.at.university.edu
+```
+
+where the 2nd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
+
+# Usage
+
+type `crun.py help` to see docs for all the commands.
+
+# `crunsub.py`
+
+There must be a `crunsub.py` script in your source project directory, checked into git, that in turn creates a `crun.sh` script that is executed when you submit your job.  See examples in `crun` repository.
+
+Jobs are submitted using `slurm` and these are `sbatch` scripts.
+
+#
 
 # Design
 
-* per project you have separate `username_projname_jobs` and `username_projname_results` repos, which point to working copies at: `~/crun/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
+* per project you have separate `username/projname/jobs` and `username/projname/results` repos, which point to working copies at: `~/crun/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
 
 * `jobid` starts with user initials: `rco000314` (probably don't need more than 1m jobs per project?) to facilitate ability to grab jobs from other users and keep job id unique.
 
