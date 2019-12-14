@@ -4,7 +4,7 @@ General purpose cluster run framework -- scripts that automate running jobs on a
 
 # Install
 
-In both cases you first clone the repo wherever you want:
+On both client and server (cluster) you first clone the repo wherever you want:
 
 ```bash
 git clone https://github.com/emer/crun.git
@@ -89,7 +89,9 @@ There must be a `crunsub.py` script in your source project directory, checked in
 
 Jobs are submitted using `slurm` and these are `sbatch` scripts.
 
-#
+# `crunres.py`
+
+There must also be a `crunres.py` script, the output of which is a list of files that will be captured into the results repository.  This allows complete flexibility in terms of what is captured.
 
 # Design
 

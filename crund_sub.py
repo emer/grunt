@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import re
+import shutil
 
 # turn this on to see more verbose debug messages
 crun_debug = False
@@ -18,6 +19,9 @@ crun_jobs = ""
 
 # crun_jobs_repo is active git repo handle
 crun_jobs_repo = 0
+
+# crun_results is the jobs git working dir for project: ~/crun/wd/username/projname/results
+crun_results = ""
 
 # crun_results_repo is active git repo handle
 crun_results_repo = 0
@@ -51,7 +55,21 @@ def submit_job(job_file):
     return
 
 def update_job(update_file):
-    #TODO: implement
+    print("Updting job " + update_file)
+    file_split = os.path.split(update_file)
+    print(file_split)
+    cdir = os.path.join(crun_jobs,file_split[0])
+    os.chdir(cdir)
+    if (not os.path.isfile("crunres.py")):
+        print("Error: crunres.py results listing script not found -- MUST be present and checked into git!")
+        return
+    p = subprocess.run(["python3", "crunres.py"], capture_output=True, text=True)
+    rdir = os.path.join(crun_results,file_split[0])
+    for f in p.stdout.splitlines():
+        rf = os.path.join(crun_results,f)
+        shutil.copyfile(f, rf)
+        print("added results: " + rf)
+        crun_results_repo.git.add(os.path.join(file_split[0],f))
     return
 
 def commit_jobs():
@@ -62,6 +80,16 @@ def commit_jobs():
     crun_jobs_repo.git.add(crun_shafn)
     crun_jobs_repo.index.commit("Processed job submissions up to commit " + commit)
     crun_jobs_repo.remotes.origin.push()
+    return
+    
+def commit_results():
+    commit = str(crun_results_repo.heads.master.commit)
+    f = open(crun_shafn, "w")
+    f.write(commit)
+    f.close()
+    crun_results_repo.git.add(crun_shafn)
+    crun_results_repo.index.commit("Processed job results up to commit " + commit)
+    crun_results_repo.remotes.origin.push()
     return
     
 ###################################################################
@@ -80,8 +108,9 @@ elif os.path.isdir(sys.argv[1]):
         print("The directory provided is not a valid crun jobs git working directory: " + crun_wd + "! " + str(e))
         exit(3)
 
+    crun_results = os.path.join(crun_wd,"results")
     try:
-        crun_results_repo = Repo(os.path.join(crun_wd,"results"))
+        crun_results_repo = Repo(crun_results)
     except Exception as e:
         print("The directory provided is not a valid crun jobs git working directory: " + crun_wd + "! " + str(e))
         exit(3)
@@ -92,6 +121,7 @@ else:
 crun_shafn = os.path.join(crun_jobs,"last_processed_commit.sha")
     
 crun_jobs_repo.remotes.origin.pull()
+crun_results_repo.remotes.origin.pull()
 
 # Check if we have a valid commit sha1 hash as the last processed, so that we can pickup launching from there.
 
@@ -100,7 +130,8 @@ if os.path.isfile(crun_shafn):
     last_processed_commit_hash = f.readline()
     f.close()
     check_for_updates = True
-    launched_job = False
+    com_jobs = False
+    com_results = False
     if crun_debug:
         print("Begin processing commits from hash: " + last_processed_commit_hash)
     last_to_head = last_processed_commit_hash + "..HEAD"
@@ -113,12 +144,14 @@ if os.path.isfile(crun_shafn):
         for f in cm.stats.files:
             if f.endswith("crun.sh"):
                 submit_job(f)
-                launched_job = True
+                com_jobs = True
             if f.endswith("update.now"):
                 update_job(f)
-                launched_job = True
-    if launched_job:
+                com_results = True
+    if com_jobs:
         commit_jobs()
+    if com_results:
+        commit_results()
     exit(0)    
 else:
     print(crun_jobs_repo.heads.master.commit)

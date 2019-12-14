@@ -16,15 +16,15 @@ import getpass
 # crun_root is ~/crun
 # you can symlink ~/crun somewhere else if you want but let's keep it simple
 crun_root = os.path.join(str(Path.home()), "crun")
-print ("crun_root: " + crun_root)
+# print ("crun_root: " + crun_root)
 
 # crun_user is user name
 crun_user = getpass.getuser()
-print("crun_user: " + crun_user)
+# print("crun_user: " + crun_user)
     
 # crun_userid is short user name, used in jobid's
 crun_userid = crun_user[:3]
-print("crun_userid: " + crun_userid)
+# print("crun_userid: " + crun_userid)
     
 # crun_cwd is current working dir path split
 crun_cwd = os.path.split(os.getcwd())
@@ -34,14 +34,14 @@ crun_proj = crun_cwd[-1]
 
 # crun_jobs is the jobs git working dir for project
 crun_jobs = os.path.join(crun_root, "wd", crun_user, crun_proj, "jobs")
-print("crun_jobs: " + crun_jobs)
+# print("crun_jobs: " + crun_jobs)
 
 # crun_jobs_repo is initialized in pull_jobs_repo() and is active git repo handle
 crun_jobs_repo = 0
 
 # crun_results is the results git working dir for project
 crun_results = os.path.join(crun_root, "wd", crun_user, crun_proj, "results")
-print("crun_results: " + crun_results)
+# print("crun_results: " + crun_results)
 
 # crun_results_repo is initialized in pull_results_repo() and is active git repo handle
 crun_results_repo = 0
@@ -78,7 +78,7 @@ def pull_jobs_repo():
     except Exception as e:
         print("The directory is not a valid crun jobs git working directory: " + crun_jobs + "! " + str(e))
         exit(3)
-    print(crun_jobs_repo)
+    # print(crun_jobs_repo)
     try:
         crun_jobs_repo.remotes.origin.pull()
     except git.exc.GitCommandError as e:
@@ -87,7 +87,7 @@ def pull_jobs_repo():
 def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wd
     p = subprocess.run(["git","ls-files"], capture_output=True, text=True)
-    os.mkdir(new_job)
+    os.makedirs(new_job)
     for f in p.stdout.splitlines():
         jf = os.path.join(new_job,f)
         shutil.copyfile(f, jf)
@@ -183,7 +183,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
 if (sys.argv[1] == "submit"):
     pull_jobs_repo()
     new_jobid()
-    new_job = os.path.join(crun_jobs, "active", crun_jobid)
+    new_job = os.path.join(crun_jobs, "active", crun_jobid, crun_proj) # add proj subdir so build works
     copy_to_jobs(new_job)
     os.chdir(new_job)
     if len(sys.argv) > 2:
@@ -216,24 +216,17 @@ elif (sys.argv[1] == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
         print("Updating all running jobs with the default or current update.now file")
-        #TODO: implement
+        # TODO: implement
+        # hmm. this is a bit tricky as we don't know what is running really.
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
         job_dir = os.path.join(crun_jobs, "active", crun_jobid)
         print(job_dir)
         updt = os.path.join(job_dir,"update.now")
-        if (os.path.isfile(updt)):
-            f = open(updt,"a")
-            f.write("#")
-            f.flush()
-            f.close()
-        else:
-            #Updating the default files
-            f = open(updt,"a")
-            # for l in crun_lib.crun_config["default_result_files"]:
-            #     f.write(l + "\n")
-            f.flush()
-            f.close()
+        f = open(updt,"a")
+        f.write("#") # could be a timestamp
+        f.flush()
+        f.close()
         crun_jobs_repo.git.add(updt)
         crun_jobs_repo.index.commit("Updating files for job " + crun_jobid)
         crun_jobs_repo.remotes.origin.push()
