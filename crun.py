@@ -17,7 +17,7 @@ def open_clustername(fnm):
     global crun_clust
     if os.path.isfile(fnm):
         f = open(fnm, "r")
-        crun_clust = str(f.readline())
+        crun_clust = str(f.readline()).rstrip()
         f.close()
         print("cluster is: " + crun_clust + " from: " + fnm)
         return True
@@ -34,13 +34,14 @@ def get_cluster():
             f.write(cnm + "\n")
             f.close()
             
+# crun_clust is cluster name -- default is in ~.crun.defcluster
+crun_clust = ""
+get_cluster()
+
 # crun_root is ~/crun
 # you can symlink ~/crun somewhere else if you want but let's keep it simple
 crun_root = os.path.join(str(Path.home()), "crun")
 # print ("crun_root: " + crun_root)
-
-# crun_clust is cluster name -- default is in ~.crun.defcluster
-crun_clust = get_cluster()
 
 # crun_user is user name
 crun_user = getpass.getuser()
