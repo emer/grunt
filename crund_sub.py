@@ -67,7 +67,7 @@ def update_job(update_file):
     p = subprocess.check_output(["python3", "crunres.py"], universal_newlines=True)
     rdir = os.path.join(crun_results,file_split[0])
     for f in p.splitlines():
-        rf = os.path.join(crun_results,f)
+        rf = os.path.join(rdir,f)
         shutil.copyfile(f, rf)
         print("added results: " + rf)
         crun_results_repo.git.add(os.path.join(file_split[0],f))
