@@ -182,7 +182,7 @@ def init_repos(projnm, remote):
         res_wc_repo.remotes.origin.push()
     else:
         user = remote.split("@")[0]
-        remote_url = remote + ":crun/bb/" + user + "/" + projnm
+        remote_url = remote + ":crun/bb/" + crun_clust + "/" + user + "/" + projnm
         jobs_wc_repo = Repo.init(wc_jobs)
         res_wc_repo = Repo.init(wc_res)
         set_remote(jobs_wc_repo, remote_url + "/jobs")
