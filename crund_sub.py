@@ -63,7 +63,7 @@ def update_job(update_file):
     if (not os.path.isfile("crunres.py")):
         print("Error: crunres.py results listing script not found -- MUST be present and checked into git!")
         return
-    p = subprocess.run(["python3", "crunres.py"], capture_output=True, text=True)
+    p = subprocess.run(["python3", "crunres.py"], stdout=PIPE, stderr=PIPE)
     rdir = os.path.join(crun_results,file_split[0])
     for f in p.stdout.splitlines():
         rf = os.path.join(crun_results,f)
