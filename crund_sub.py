@@ -33,7 +33,7 @@ crun_jobs_shafn = ""
 def submit_job(job_file):
     print("Submitting submit job " + job_file)
     file_split = os.path.split(job_file)
-    print(file_split)
+    # print(file_split)
     cdir = os.path.join(crun_jobs,file_split[0])
     os.chdir(cdir)
 
@@ -58,7 +58,7 @@ def submit_job(job_file):
 def update_job(update_file):
     print("Updting job " + update_file)
     file_split = os.path.split(update_file)
-    print(file_split)
+    # print(file_split)
     cdir = os.path.join(crun_jobs,file_split[0])
     os.chdir(cdir)
     if (not os.path.isfile("crunres.py")):
@@ -66,6 +66,8 @@ def update_job(update_file):
         return
     p = subprocess.check_output(["python3", "crunres.py"], universal_newlines=True)
     rdir = os.path.join(crun_results,file_split[0])
+    os.makedirs(rdir)
+    # print("rdir: " + rdir)
     for f in p.splitlines():
         rf = os.path.join(rdir,f)
         shutil.copyfile(f, rf)
