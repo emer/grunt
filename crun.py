@@ -14,10 +14,12 @@ from pathlib import Path
 import getpass
 
 def open_clustername(fnm):
+    global crun_clust
     if os.path.isfile(fnm):
         f = open(fnm, "r")
         crun_clust = str(f.readline())
         f.close()
+        print("cluster is: " + crun_clust + " from: " + fnm)
         return True
     else:
         return False
@@ -54,15 +56,18 @@ crun_cwd = os.path.split(os.getcwd())
 # crun_proj is current project name = subir name of cwd
 crun_proj = crun_cwd[-1]
 
+# crun_wc is the working copy root
+crun_wc = os.path.join(crun_root, "wc", crun_user, crun_proj)
+
 # crun_jobs is the jobs git working dir for project
-crun_jobs = os.path.join(crun_root, "wd", crun_user, crun_proj, "jobs")
+crun_jobs = os.path.join(crun_wc, "jobs")
 # print("crun_jobs: " + crun_jobs)
 
 # crun_jobs_repo is initialized in pull_jobs_repo() and is active git repo handle
 crun_jobs_repo = 0
 
 # crun_results is the results git working dir for project
-crun_results = os.path.join(crun_root, "wd", crun_user, crun_proj, "results")
+crun_results = os.path.join(crun_wc, "results")
 # print("crun_results: " + crun_results)
 
 # crun_results_repo is initialized in pull_results_repo() and is active git repo handle
@@ -107,7 +112,7 @@ def pull_jobs_repo():
         print("Could not execute a git pull on jobs repository " + crun_jobs + str(e))
 
 def copy_to_jobs(new_job):
-    # copies current git-controlled files to new_job dir in jobs wd
+    # copies current git-controlled files to new_job dir in jobs wc
     p = subprocess.check_output(["git","ls-files"], universal_newlines=True)
     os.makedirs(new_job)
     for f in p.splitlines():
@@ -132,10 +137,9 @@ def set_remote(repo, remote_url):
     repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master).checkout()
     
 def assert_repo():
-    wd = os.path.join(crun_root, "wd", crun_user, crun_proj)
-    if os.path.isdir(wd):
+    if os.path.isdir(crun_wc):
         return
-    print("Error: the working git repository not found for this project at: " + wd)
+    print("Error: the working git repository not found for this project at: " + crun_wc)
     print("you must first create on server using: crun.py newproj " + crun_proj)
     print("and then create locally: crun.py newproj " + crun_proj + " username@server.at.univ.edu")
     exit(1)
@@ -144,44 +148,44 @@ def init_repos(projnm, remote):
     # creates repositories for given project name
     # remote is remote origin username -- must create on cluster first
     # before creating locally!
-    wd = os.path.join(crun_root, "wd", crun_user, projnm)
+    wc = os.path.join(crun_root, "wc", crun_clust, crun_user, projnm)
     
-    if os.path.isdir(wd):
+    if os.path.isdir(wc):
         return
 
-    bb = os.path.join(crun_root, "bb", crun_user, projnm)
+    bb = os.path.join(crun_root, "bb", crun_clust, crun_user, projnm)
     bb_jobs = os.path.join(bb, "jobs")
-    wd_jobs = os.path.join(wd, "jobs")
+    wc_jobs = os.path.join(wc, "jobs")
     bb_res = os.path.join(bb, "results")
-    wd_res = os.path.join(wd, "results")
+    wc_res = os.path.join(wc, "results")
 
-    print("crun creating new working repo: " + wd)
+    print("crun creating new working repo: " + wc)
 
     if remote == "":
         jobs_bb_repo = Repo.init(bb_jobs, bare=True)
         res_bb_repo = Repo.init(bb_res, bare=True)
-        jobs_wd_repo = Repo.clone_from(bb_jobs, wd_jobs)
-        res_wd_repo = Repo.clone_from(bb_res, wd_res)
-        add_new_git_dir(jobs_wd_repo, os.path.join(wd_jobs,"active"))
-        add_new_git_dir(jobs_wd_repo, os.path.join(wd_jobs,"delete"))
-        add_new_git_dir(jobs_wd_repo, os.path.join(wd_jobs,"archive"))
+        jobs_wc_repo = Repo.clone_from(bb_jobs, wc_jobs)
+        res_wc_repo = Repo.clone_from(bb_res, wc_res)
+        add_new_git_dir(jobs_wc_repo, os.path.join(wc_jobs,"active"))
+        add_new_git_dir(jobs_wc_repo, os.path.join(wc_jobs,"delete"))
+        add_new_git_dir(jobs_wc_repo, os.path.join(wc_jobs,"archive"))
         
-        jobs_wd_repo.index.commit("Initial commit for " + projnm + " project")
-        jobs_wd_repo.remotes.origin.push()
+        jobs_wc_repo.index.commit("Initial commit for " + projnm + " project")
+        jobs_wc_repo.remotes.origin.push()
         
-        add_new_git_dir(res_wd_repo, os.path.join(wd_res,"active"))
-        add_new_git_dir(res_wd_repo, os.path.join(wd_res,"delete"))
-        add_new_git_dir(res_wd_repo, os.path.join(wd_res,"archive"))
+        add_new_git_dir(res_wc_repo, os.path.join(wc_res,"active"))
+        add_new_git_dir(res_wc_repo, os.path.join(wc_res,"delete"))
+        add_new_git_dir(res_wc_repo, os.path.join(wc_res,"archive"))
         
-        res_wd_repo.index.commit("Initial commit for " + projnm + " project")
-        res_wd_repo.remotes.origin.push()
+        res_wc_repo.index.commit("Initial commit for " + projnm + " project")
+        res_wc_repo.remotes.origin.push()
     else:
         user = remote.split("@")[0]
         remote_url = remote + ":crun/bb/" + user + "/" + projnm
-        jobs_wd_repo = Repo.init(wd_jobs)
-        res_wd_repo = Repo.init(wd_res)
-        set_remote(jobs_wd_repo, remote_url + "/jobs")
-        set_remote(res_wd_repo, remote_url + "/results")
+        jobs_wc_repo = Repo.init(wc_jobs)
+        res_wc_repo = Repo.init(wc_res)
+        set_remote(jobs_wc_repo, remote_url + "/jobs")
+        set_remote(res_wc_repo, remote_url + "/results")
     
 ##########################################################    
 # Running starts here
@@ -190,7 +194,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\ncrun is the cluster run client script for running and mananging jobs via git\n")
     print("usage: pass commands with args as follows\n")
     print("submit\t [args] submits git controlled files in current dir to jobs working dir:")
-    print("\t ~/crun/wd/username/projdir/jobs/active/jobid -- also saves option args to job.args")
+    print("\t ~/crun/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
     print("\t which you can refer to later for notes about the job or use in your scripts.")
     print("\t git commit triggers update of server git repo, and crund daemon then submits the new job.")
     print("\t you *must* have a crunsub.py script in the project dir that will create a crun.sh that the")
@@ -237,7 +241,7 @@ elif (sys.argv[1] == "delete"):
 elif (sys.argv[1] == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
-        print("Updating all running jobs with the default or current update.now file")
+        print("Updating all running jobs")
         # TODO: implement
         # hmm. this is a bit tricky as we don't know what is running really.
     elif len(sys.argv) == 3:

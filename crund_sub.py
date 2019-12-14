@@ -1,5 +1,5 @@
 # this is the inner-loop crun daemon that is spawned by crund.py for each project working directory
-# it is passed the arg: ~/crun/wd/username/projname  to process
+# it is passed the arg: ~/crun/wc/username/projname  to process
 
 from git import Repo
 import os
@@ -12,16 +12,16 @@ import shutil
 # turn this on to see more verbose debug messages
 crun_debug = False
 
-# crun_wd is the working dir for project: ~/crun/wd/username/projname
-crun_wd = ""
+# crun_wc is the working dir for project: ~/crun/wc/cluster/username/projname
+crun_wc = ""
 
-# crun_jobs is the jobs git working dir for project: ~/crun/wd/username/projname/jobs
+# crun_jobs is the jobs git working dir for project: ~/crun/wc/cluster/username/projname/jobs
 crun_jobs = ""
 
 # crun_jobs_repo is active git repo handle
 crun_jobs_repo = 0
 
-# crun_results is the jobs git working dir for project: ~/crun/wd/username/projname/results
+# crun_results is the jobs git working dir for project: ~/crun/wc/cluster/username/projname/results
 crun_results = ""
 
 # crun_results_repo is active git repo handle
@@ -99,23 +99,23 @@ def commit_results():
 #  starts running here    
     
 if len(sys.argv) != 2:
-    print("usage: crund_sub.py ~/crun/wd/username/projname")
+    print("usage: crund_sub.py ~/crun/wc/cluster/username/projname")
     print("  1 argument needed, but " + str(len(sys.argv) - 1) + " given")
     exit(1)
 elif os.path.isdir(sys.argv[1]):
-    crun_wd = sys.argv[1]
-    crun_jobs = os.path.join(crun_wd,"jobs")
+    crun_wc = sys.argv[1]
+    crun_jobs = os.path.join(crun_wc,"jobs")
     try:
         crun_jobs_repo = Repo(crun_jobs)
     except Exception as e:
-        print("The directory provided is not a valid crun jobs git working directory: " + crun_wd + "! " + str(e))
+        print("The directory provided is not a valid crun jobs git working directory: " + crun_wc + "! " + str(e))
         exit(3)
 
-    crun_results = os.path.join(crun_wd,"results")
+    crun_results = os.path.join(crun_wc,"results")
     try:
         crun_results_repo = Repo(crun_results)
     except Exception as e:
-        print("The directory provided is not a valid crun jobs git working directory: " + crun_wd + "! " + str(e))
+        print("The directory provided is not a valid crun jobs git working directory: " + crun_wc + "! " + str(e))
         exit(3)
 else:
     print("The path given is not a valid directory")

@@ -55,11 +55,13 @@ Then you can do `screen` locally on your client, ssh into your server, and then 
 
 # New projects
 
-Each project has its own github repositories on the server, and working copies on the client, that contain all the files for a given project.  These repositories are (wd = working directory):
+Each project has its own github repositories on the server, and working copies on the client (and server), that contain all the files for a given project.  These repositories are (wc = working copy):
 
-* `~/crun/wd/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
+* `~/crun/wc/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
 
-* `~/crun/wd/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+* `~/crun/wc/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+
+The `cluster` is the name of the cluster, which is prompted when you create your first project, and then stored in `~/.crun.defcluster` -- if you have a `crun.cluster` file in the current directory it will override that.
 
 The `projname` is the directory name where you execute the `crun.py submit` job -- i.e., the directory for your simulation.
 
@@ -68,13 +70,13 @@ The server has the "remote" git repository for your client, and thus you must fi
 * To initialize a new project on the server, run this command (can be done anywhere):
 
 ```bash
-crun.py newproj clustname projname
+crun.py newproj projname
 ```
 
 * Once that completes, then on the client, do:
 
 ```bash
-crun.py newproj clustname projname username@server.at.university.edu
+crun.py newproj projname username@server.at.university.edu
 ```
 
 where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
@@ -95,7 +97,7 @@ There must also be a `crunres.py` script, the output of which is a list of files
 
 # Design
 
-* per project you have separate `clustname/username/projname/jobs` and `clustname/username/projname/results` repos, which have working copies at: `~/crun/wd/clustname/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/wd/clustname/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
+* per project you have separate `clustname/username/projname/jobs` and `clustname/username/projname/results` repos, which have working copies at: `~/crun/wc/clustname/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/wc/clustname/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
 
 * we need `clustname` to allow client to run same project on different clusters.  the default cluster name is in `~/.crun.defcluster` and loaded and set in crun.py script at startup, and used unless you have a `crun.cluster` file in your project dir, with the name of the cluster in it.
 
@@ -107,7 +109,7 @@ There must also be a `crunres.py` script, the output of which is a list of files
 
 * have one client script, `crun` that has different command forms, e.g., `crun submit | cancel | archive` etc -- easier to maintain one script.  user only ever does things in current *source* dir, e.g., `~/ccngit/projname/sims/version` which is a normal github-backed repo of the project source files. `crun` manages the repos behind the scenes.  similar to current clusterrun.
 
-* `crun archive` does a git mv from `~/crun/wd/cluster/username/projname/jobs/active/jobid` to `.../archive/jobid` and likewise for `crun delete` (both also do same for results repo).  if we do this client-side, and server has extra files in jobs dir where it ran, which it will, then it might barf when it does its `git pull`.  maybe there is a git `--force` option to make this work?  need to figure this out -- that would be an easy way to delete all irrelevant files.  otherwise, we'd need to have it write a `archive.job` file and then the server would do it, and you'd have to remember to do a git pull locally..
+* `crun archive` does a git mv from `~/crun/wc/cluster/username/projname/jobs/active/jobid` to `.../archive/jobid` and likewise for `crun delete` (both also do same for results repo).  if we do this client-side, and server has extra files in jobs dir where it ran, which it will, then it might barf when it does its `git pull`.  maybe there is a git `--force` option to make this work?  need to figure this out -- that would be an easy way to delete all irrelevant files.  otherwise, we'd need to have it write a `archive.job` file and then the server would do it, and you'd have to remember to do a git pull locally..
 
 * `crun nuke` removes jobid directory entirely, but I really don't think we'll need to actually purge from git history -- it is enough to just remove the files so they aren't there cluttering up your space.
 
