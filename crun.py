@@ -264,7 +264,7 @@ elif (sys.argv[1] == "newproj"):
         print("newproj command requires name of project")
         exit(1)
     projnm = sys.argv[2]
-    remote_url = ""
+    remote = ""
     if len(sys.argv) == 4:
         remote = sys.argv[3]
     init_repos(projnm, remote)
