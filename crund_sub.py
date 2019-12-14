@@ -26,8 +26,8 @@ crun_results = ""
 # crun_results_repo is active git repo handle
 crun_results_repo = 0
 
-# crun_shafn is the sha filename that we use to track what has been processed
-crun_shafn = ""
+# crun_jobs_shafn is the sha filename that we use to track what has been processed
+crun_jobs_shafn = ""
 
 def submit_job(job_file):
     print("Submitting submit job " + job_file)
@@ -74,20 +74,20 @@ def update_job(update_file):
 
 def commit_jobs():
     commit = str(crun_jobs_repo.heads.master.commit)
-    f = open(crun_shafn, "w")
+    f = open(crun_jobs_shafn, "w")
     f.write(commit)
     f.close()
-    crun_jobs_repo.git.add(crun_shafn)
+    crun_jobs_repo.git.add(crun_jobs_shafn)
     crun_jobs_repo.index.commit("Processed job submissions up to commit " + commit)
     crun_jobs_repo.remotes.origin.push()
     return
     
 def commit_results():
     commit = str(crun_results_repo.heads.master.commit)
-    f = open(crun_shafn, "w")
+    f = open(crun_results_shafn, "w")
     f.write(commit)
     f.close()
-    crun_results_repo.git.add(crun_shafn)
+    crun_results_repo.git.add(crun_results_shafn)
     crun_results_repo.index.commit("Processed job results up to commit " + commit)
     crun_results_repo.remotes.origin.push()
     return
@@ -118,15 +118,16 @@ else:
     print("The path given is not a valid directory")
     exit(2)
 
-crun_shafn = os.path.join(crun_jobs,"last_processed_commit.sha")
+crun_jobs_shafn = os.path.join(crun_jobs,"last_processed_commit.sha")
+crun_results_shafn = os.path.join(crun_results,"last_processed_commit.sha")
     
 crun_jobs_repo.remotes.origin.pull()
 crun_results_repo.remotes.origin.pull()
 
 # Check if we have a valid commit sha1 hash as the last processed, so that we can pickup launching from there.
 
-if os.path.isfile(crun_shafn):
-    f = open(crun_shafn, "r")
+if os.path.isfile(crun_jobs_shafn):
+    f = open(crun_jobs_shafn, "r")
     last_processed_commit_hash = f.readline()
     f.close()
     check_for_updates = True
@@ -155,12 +156,20 @@ if os.path.isfile(crun_shafn):
     exit(0)    
 else:
     print(crun_jobs_repo.heads.master.commit)
-    f = open(crun_shafn, "a")
+    f = open(crun_jobs_shafn, "a")
     f.write(str(crun_jobs_repo.heads.master.commit))
     f.close()
-    crun_jobs_repo.git.add(crun_shafn)
+    crun_jobs_repo.git.add(crun_jobs_shafn)
     crun_jobs_repo.index.commit("This is the first time to poll this project, so write latest commit as reference")
     crun_jobs_repo.remotes.origin.push()
+    print(crun_jobs_repo.heads.master.commit)
+
+    f = open(crun_results_shafn, "a")
+    f.write(str(crun_results_repo.heads.master.commit))
+    f.close()
+    crun_results_repo.git.add(crun_results_shafn)
+    crun_results_repo.index.commit("This is the first time to poll this project, so write latest commit as reference")
+    crun_results_repo.remotes.origin.push()
     exit(0)
 
 
