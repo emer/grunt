@@ -64,9 +64,9 @@ def update_job(update_file):
     if (not os.path.isfile("crunres.py")):
         print("Error: crunres.py results listing script not found -- MUST be present and checked into git!")
         return
-    p = subprocess.run(["python3", "crunres.py"], stdout=PIPE, stderr=PIPE)
+    p = subprocess.check_output(["python3", "crunres.py"], universal_newlines=True)
     rdir = os.path.join(crun_results,file_split[0])
-    for f in p.stdout.splitlines():
+    for f in p.splitlines():
         rf = os.path.join(crun_results,f)
         shutil.copyfile(f, rf)
         print("added results: " + rf)
@@ -150,6 +150,7 @@ if os.path.isfile(crun_jobs_shafn):
             if f.endswith("update.now"):
                 update_job(f)
                 com_results = True
+                com_jobs = True
     if com_jobs:
         commit_jobs()
     if com_results:

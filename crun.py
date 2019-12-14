@@ -220,7 +220,7 @@ elif (sys.argv[1] == "update"):
         # hmm. this is a bit tricky as we don't know what is running really.
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
-        job_dir = os.path.join(crun_jobs, "active", crun_jobid)
+        job_dir = os.path.join(crun_jobs, "active", crun_jobid, crun_proj)
         print(job_dir)
         updt = os.path.join(job_dir,"update.now")
         f = open(updt,"a")
