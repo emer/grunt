@@ -4,6 +4,7 @@
 from git import Repo
 import os
 import subprocess
+from subprocess import Popen, PIPE
 import sys
 import re
 import shutil
