@@ -13,10 +13,32 @@ import json
 from pathlib import Path
 import getpass
 
+def open_clustername(fnm):
+    if os.path.isfile(fnm):
+        f = open(fnm, "r")
+        crun_clust = str(f.readline())
+        f.close()
+        return True
+    else:
+        return False
+
+def get_cluster():
+    cf = "crun.cluster"
+    if not open_clustername(cf):
+        df = os.path.join(str(Path.home()), ".crun.defcluster")
+        if not open_clustername(df):
+            cnm = str(input("enter name of default cluster to use: "))
+            f = open(df, "w")
+            f.write(cnm + "\n")
+            f.close()
+            
 # crun_root is ~/crun
 # you can symlink ~/crun somewhere else if you want but let's keep it simple
 crun_root = os.path.join(str(Path.home()), "crun")
 # print ("crun_root: " + crun_root)
+
+# crun_clust is cluster name -- default is in ~.crun.defcluster
+crun_clust = get_cluster()
 
 # crun_user is user name
 crun_user = getpass.getuser()
@@ -86,9 +108,9 @@ def pull_jobs_repo():
 
 def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wd
-    p = subprocess.run(["git","ls-files"], capture_output=True, text=True)
+    p = subprocess.check_output(["git","ls-files"], universal_newlines=True)
     os.makedirs(new_job)
-    for f in p.stdout.splitlines():
+    for f in p.splitlines():
         jf = os.path.join(new_job,f)
         shutil.copyfile(f, jf)
         crun_jobs_repo.git.add(jf)
@@ -196,7 +218,7 @@ if (sys.argv[1] == "submit"):
     if (not os.path.isfile("crunsub.py")):
         print("Error: crunsub.py submission creation script not found -- MUST be present and checked into git!")
         exit(1)
-    p = subprocess.run(["python3","./crunsub.py",crun_proj,crun_jobid], capture_output=False)
+    p = subprocess.run(["python3","./crunsub.py",crun_proj,crun_jobid])
     if (not os.path.isfile("crun.sh")):
         print("Error: crunsub.py submission creation script did not create a crun.sh file!")
         exit(1)

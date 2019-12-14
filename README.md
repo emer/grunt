@@ -57,9 +57,9 @@ Then you can do `screen` locally on your client, ssh into your server, and then 
 
 Each project has its own github repositories on the server, and working copies on the client, that contain all the files for a given project.  These repositories are (wd = working directory):
 
-* `~/crun/wd/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
+* `~/crun/wd/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
 
-* `~/crun/wd/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+* `~/crun/wd/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
 
 The `projname` is the directory name where you execute the `crun.py submit` job -- i.e., the directory for your simulation.
 
@@ -68,16 +68,16 @@ The server has the "remote" git repository for your client, and thus you must fi
 * To initialize a new project on the server, run this command (can be done anywhere):
 
 ```bash
-crun.py newproj projname
+crun.py newproj clustname projname
 ```
 
 * Once that completes, then on the client, do:
 
 ```bash
-crun.py newproj projname username@server.at.university.edu
+crun.py newproj clustname projname username@server.at.university.edu
 ```
 
-where the 2nd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
+where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
 
 # Usage
 
@@ -95,7 +95,9 @@ There must also be a `crunres.py` script, the output of which is a list of files
 
 # Design
 
-* per project you have separate `username/projname/jobs` and `username/projname/results` repos, which point to working copies at: `~/crun/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
+* per project you have separate `clustname/username/projname/jobs` and `clustname/username/projname/results` repos, which have working copies at: `~/crun/wd/clustname/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/wd/clustname/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
+
+* we need `clustname` to allow client to run same project on different clusters.  the default cluster name is in `~/.crun.defcluster` and loaded and set in crun.py script at startup, and used unless you have a `crun.cluster` file in your project dir, with the name of the cluster in it.
 
 * `jobid` starts with user initials: `rco000314` (probably don't need more than 1m jobs per project?) to facilitate ability to grab jobs from other users and keep job id unique.
 
@@ -105,19 +107,28 @@ There must also be a `crunres.py` script, the output of which is a list of files
 
 * have one client script, `crun` that has different command forms, e.g., `crun submit | cancel | archive` etc -- easier to maintain one script.  user only ever does things in current *source* dir, e.g., `~/ccngit/projname/sims/version` which is a normal github-backed repo of the project source files. `crun` manages the repos behind the scenes.  similar to current clusterrun.
 
-* `crun archive` does a git mv from `~/crun/username/projname/jobs/active/jobid` to `.../archive/jobid` and likewise for `crun delete` (both also do same for results repo).  if we do this client-side, and server has extra files in jobs dir where it ran, which it will, then it might barf when it does its `git pull`.  maybe there is a git `--force` option to make this work?  need to figure this out -- that would be an easy way to delete all irrelevant files.  otherwise, we'd need to have it write a `archive.job` file and then the server would do it, and you'd have to remember to do a git pull locally..
+* `crun archive` does a git mv from `~/crun/wd/cluster/username/projname/jobs/active/jobid` to `.../archive/jobid` and likewise for `crun delete` (both also do same for results repo).  if we do this client-side, and server has extra files in jobs dir where it ran, which it will, then it might barf when it does its `git pull`.  maybe there is a git `--force` option to make this work?  need to figure this out -- that would be an easy way to delete all irrelevant files.  otherwise, we'd need to have it write a `archive.job` file and then the server would do it, and you'd have to remember to do a git pull locally..
 
 * `crun nuke` removes jobid directory entirely, but I really don't think we'll need to actually purge from git history -- it is enough to just remove the files so they aren't there cluttering up your space.
 
 * keep design fully "stateful" as much as possible -- avoid overwriting same files, so a basic `git pull` will get everything that is needed.  daemon can iterate over all new directories / files in the pull and do everything there, without risk of overwriting, and no need to check through history of checkins.  do everything with simple text files and no need for data tables etc -- keep it super simple.  file system / dir structure has all the info.
 
+* all job relevant output files are named `job.` and generically all `job.*` files are committed back to jobs.
+    + `job.slurmid` -- generated by the submit_job in `crund_sub.py`
+    + `job.start` -- should be generated by `crun.sh` script (in turn generated by `crunsub.py`) and contains `date` output when job started. 
+    + `job.end` -- likewise has job end timestamp.
+
+* crun command files are all `crcmd.*`:
+    + `crcmd.cancel` -- cancel job
+    + `crcmd.update` -- update files to results
+    
 * e.g., to cancel a job, checkin a file named `CANCEL.job` (can write the date into that file for future reference) -- then everyone can just look for that file to see if and when it was cancelled.  in general don't need ALLCAPS for filenames but for CANCEL it might make sense so you can quickly see that job was cancelled.
 
-* main job file is `crun.sh` -- server daemon just does slurm `sbatch crun.sh` or something like that, and checks back in a file named `crun.jobid` that contains the slurm job id for that master job.
+* main job file is `crun.sh` -- server daemon just does slurm `sbatch crun.sh` or something like that, and checks back in a file named `job.slurmid` that contains the slurm job id for that master job.
     + need to figure out how to ensure that subsequent slurm jobs are all canceled if master one is cancelled -- then client script just needs to do `scancel  < crun.jobid` to stop everything.
     + `crunsub.py` script must exist in current dir to create the job sumbission script -- that way we can write various *other* scripts that write useful crun.sh scripts -- keep this all *client* side so server is super simple and generic, and all logic is handled with these client scripts.  has been a pita to keep server side daemon script updated, so this fixes that.
 
-* to trigger update of data files, checkin `update.now` file that has a list of files to update (one per line), and the daemon then just does git add, git commit / push on those files into the results repo.  if we end up committing this file multiple times before the daemon gets around to it, it might not be such a big deal -- usu going to be the same files and probably you can be patient enough to not spam yourself..
+* to trigger update of data files, checkin `crcmd.update` file that optionally has a list of files to update (one per line), or it runs `crunres.py` to get a list based on the project.  The daemon then just does git add, git commit / push on those files into the results repo.  if we end up committing this file multiple times before the daemon gets around to it, it might not be such a big deal -- usu going to be the same files and probably you can be patient enough to not spam yourself..
 
 * to make new server git repos, could have an "outer loop" daemon that just does this in response to checking in a command file in a shared repo, or just have people ssh into server and run a simple command to make it (start with latter and add former if deemed worth it).  One issue is that the client-side config should all be done at same time too, so it would be more convenient to have a single client side command that does everything, automatically..
 
