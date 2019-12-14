@@ -26,7 +26,7 @@ print("crun_wd: " + crun_wd)
 
 while True:
     for f in listdir(crun_wd):
-        print(f)
+        # print(f)
         crun_proj = os.path.join(crun_wd,f)
         if os.path.isdir(crun_proj):
             # print("Polling " + crun_proj)

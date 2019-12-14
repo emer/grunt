@@ -91,7 +91,7 @@ Jobs are submitted using `slurm` and these are `sbatch` scripts.
 
 # `crunres.py`
 
-There must also be a `crunres.py` script, the output of which is a list of files that will be captured into the results repository.  This allows complete flexibility in terms of what is captured.
+There must also be a `crunres.py` script, the output of which is a list of files that will be captured into the results repository, one on each line.  This allows complete flexibility in terms of what is captured.  There is an example in the repository.
 
 # Design
 
