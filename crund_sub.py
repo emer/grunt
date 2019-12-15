@@ -71,8 +71,8 @@ def add_job_files(jobid):
     crun_jobs_repo.remotes.origin.push()
 
 def write_job_file(fname, content):
-    with open("job.slurmid", "w") as f:
-        f.write(str(result.group(1)))
+    with open(fname, "w") as f:
+        f.write(content)
 
 def submit_job():
     print("Submitting submit job: " + crun_job)
