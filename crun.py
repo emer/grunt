@@ -58,7 +58,7 @@ crun_cwd = os.path.split(os.getcwd())
 crun_proj = crun_cwd[-1]
 
 # crun_wc is the working copy root
-crun_wc = os.path.join(crun_root, "wc", crun_user, crun_proj)
+crun_wc = os.path.join(crun_root, "wc", crun_clust, crun_user, crun_proj)
 
 # crun_jobs is the jobs git working dir for project
 crun_jobs = os.path.join(crun_wc, "jobs")
@@ -120,7 +120,23 @@ def copy_to_jobs(new_job):
         jf = os.path.join(new_job,f)
         shutil.copyfile(f, jf)
         crun_jobs_repo.git.add(jf)
-                          
+
+        
+def write_cmd(jobid, cmd, cmdstr):
+    job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
+    cmdfn = os.path.join(job_dir, "crcmd." + cmd)
+    f = open(cmdfn,"w")
+    f.write(cmdstr + "\n")
+    f.flush()
+    f.close()
+    crun_jobs_repo.git.add(cmdfn)
+    crun_jobs_repo.index.commit("Command: " + cmd + " job: " + jobid)
+    crun_jobs_repo.remotes.origin.push()
+    print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
+        
+#########################################
+# repo mgmt
+          
 def add_new_git_dir(repo, path):
     # add a new dir to git and initialize with a placeholder
     os.mkdir(path)
@@ -247,18 +263,11 @@ elif (sys.argv[1] == "update"):
         # hmm. this is a bit tricky as we don't know what is running really.
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
-        job_dir = os.path.join(crun_jobs, "active", crun_jobid, crun_proj)
-        print(job_dir)
-        updt = os.path.join(job_dir,"update.now")
-        f = open(updt,"a")
-        f.write("#") # could be a timestamp
-        f.flush()
-        f.close()
-        crun_jobs_repo.git.add(updt)
-        crun_jobs_repo.index.commit("Updating files for job " + crun_jobid)
-        crun_jobs_repo.remotes.origin.push()
+        write_cmd(crun_jobid, "update", "#")
     else:
-        None
+        crun_jobid = sys.argv[2]
+        flist = "\n".join(sys.argv[3:])
+        write_cmd(crun_jobid, "update", flist)
     exit(0)
 elif (sys.argv[1] == "newproj"):
     if len(sys.argv) < 3:

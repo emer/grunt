@@ -11,6 +11,10 @@ crun_proj = sys.argv[1]
 # jobid is passed as second arg
 crun_jobid = sys.argv[2]
 
+# crun_user is user name *ON THE SERVER* (cluster)
+# may not be the same as local user!
+crun_user = "oreillyr"
+
 f = open('crun.sh', 'w+')
 f.write("#!/bin/bash\n")
 # f.write("#SBATCH --mem=4G\n") # amount of memory -- not always needed

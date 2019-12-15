@@ -8,6 +8,7 @@ from subprocess import Popen, PIPE
 import sys
 import re
 import shutil
+import glob
 
 # turn this on to see more verbose debug messages
 crun_debug = False
@@ -30,49 +31,83 @@ crun_results_repo = 0
 # crun_jobs_shafn is the sha filename that we use to track what has been processed
 crun_jobs_shafn = ""
 
-def submit_job(job_file):
-    print("Submitting submit job " + job_file)
-    file_split = os.path.split(job_file)
-    # print(file_split)
-    cdir = os.path.join(crun_jobs,file_split[0])
-    os.chdir(cdir)
+# crun_jobid is the current jobid code
+crun_jobid = ""
 
+# crun_job is current job file relative to crun_jobs
+# set by master update loop
+crun_job = ""
+
+# crun_jobdir is current job directory relative to crun_jobs
+# e.g., active/jobid/projname
+# set by get_paths
+crun_jobdir = ""
+
+# crun_jobpath is current full job path: crun_jobs/crun_jobdir
+# set by get_paths
+crun_jobpath = ""
+
+# crun_jobfnm is current job filename, e.g., crun.sh
+# set by get_paths
+crun_jobfnm = ""
+
+# get_paths gets job file paths based on a job_file which is relative to 
+# project 
+def get_paths(job_file)
+    global crun_jobdir, crun_jobpath, crun_jobfnm, crun_jobid
+    file_split = os.path.split(job_file)
+    crun_jobdir = file_split[0]
+    crun_jobpath = os.path.join(crun_jobs, crun_jobdir)
+    crun_jobfnm = file_split[1]
+    crun_jobid = os.path.split(crun_jobdir)[1]
+
+# add job files adds all files named job.* in current dir
+def add_job_files(jobid):
+    jobfiles := "\n".join(glob.glob("job.*")
+    crun_jobs_repo.remotes.origin.push()
+    for f in jobfiles.splitlines():
+        crun_jobs_repo.git.add(f)
+    crun_jobs_repo.index.commit("Comitting job files for job: " + jobid)
+    crun_jobs_repo.remotes.origin.push()
+
+def write_job_file(fname, content):
+    f = open("job.slurmid", "w")
+    f.write(str(result.group(1)))
+    f.flush()
+    f.close()
+
+def submit_job():
+    print("Submitting submit job: " + crun_job)
+    os.chdir(crun_jobpath)
     try:
-        result = subprocess.check_output(["sbatch",file_split[1]])
+        result = subprocess.check_output(["sbatch",crun_jobfnm])
     except CalledProcessError:
         print("Failed to submit job script")
         exit(5)
     prog = re.compile('.*Submitted batch job (\d+).*')
     result = prog.match(str(result))
-    f = open("job.slurmid", "a")
-    f.write(str(result.group(1)))
-    f.close()
-    crun_jobs_repo.remotes.origin.push()
-    crun_jobs_repo.git.add(os.path.join(file_split[0],"job.slurmid"))
-    crun_jobs_repo.index.commit("Comitting jobid for job: " + str(file_split[1]))
-    crun_jobs_repo.remotes.origin.push()
-    print(result.group(1))
-    
+    slurmid = result.group(1)
+    write_job_file("job.slurmid", slurmid)
+    print("Slurm job id: " + slurmid)
+    add_job_files(crun_jobid)
     return
 
-def update_job(update_file):
-    print("Updting job " + update_file)
-    file_split = os.path.split(update_file)
-    # print(file_split)
-    cdir = os.path.join(crun_jobs,file_split[0])
-    os.chdir(cdir)
+def update_job():
+    print("Updating job: " + crun_job)
+    os.chdir(crun_jobpath)
     if (not os.path.isfile("crunres.py")):
         print("Error: crunres.py results listing script not found -- MUST be present and checked into git!")
         return
     p = subprocess.check_output(["python3", "crunres.py"], universal_newlines=True)
-    rdir = os.path.join(crun_results,file_split[0])
+    rdir = os.path.join(crun_results,crun_jobdir)
     os.makedirs(rdir)
     # print("rdir: " + rdir)
     for f in p.splitlines():
         rf = os.path.join(rdir,f)
         shutil.copyfile(f, rf)
         print("added results: " + rf)
-        crun_results_repo.git.add(os.path.join(file_split[0],f))
+        crun_results_repo.git.add(os.path.join(crun_jobdir,f))
+    add_job_files(crun_jobid)
     return
 
 def commit_jobs():
@@ -146,11 +181,12 @@ if os.path.isfile(crun_jobs_shafn):
         if crun_debug:
             print("Processing commit " + str(cm))
         for f in cm.stats.files:
-            if f.endswith("crun.sh"):
-                submit_job(f)
+            get_paths(f)
+            if crun_jobfnm == "crun.sh":
+                submit_job()
                 com_jobs = True
-            if f.endswith("update.now"):
-                update_job(f)
+            if crun_jobfnm == "crcmd.update":
+                update_job()
                 com_results = True
                 com_jobs = True
     if com_jobs:
