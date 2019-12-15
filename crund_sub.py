@@ -53,7 +53,7 @@ crun_jobfnm = ""
 
 # get_paths gets job file paths based on a job_file which is relative to 
 # project 
-def get_paths(job_file)
+def get_paths(job_file):
     global crun_jobdir, crun_jobpath, crun_jobfnm, crun_jobid
     file_split = os.path.split(job_file)
     crun_jobdir = file_split[0]
@@ -63,10 +63,10 @@ def get_paths(job_file)
 
 # add job files adds all files named job.* in current dir
 def add_job_files(jobid):
-    jobfiles := "\n".join(glob.glob("job.*")
+    jobfiles = "\n".join(glob.glob("job.*"))
     crun_jobs_repo.remotes.origin.push()
     for f in jobfiles.splitlines():
-        crun_jobs_repo.git.add(f)
+        crun_jobs_repo.git.add(os.path.join(crun_jobdir, f))
     crun_jobs_repo.index.commit("Comitting job files for job: " + jobid)
     crun_jobs_repo.remotes.origin.push()
 
@@ -100,7 +100,8 @@ def update_job():
         return
     p = subprocess.check_output(["python3", "crunres.py"], universal_newlines=True)
     rdir = os.path.join(crun_results,crun_jobdir)
-    os.makedirs(rdir)
+    if not os.path.isdir(rdir):
+        os.makedirs(rdir)
     # print("rdir: " + rdir)
     for f in p.splitlines():
         rf = os.path.join(rdir,f)
