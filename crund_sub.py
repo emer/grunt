@@ -129,15 +129,60 @@ def update_job():
     add_job_files(crun_jobid)
     return
 
+def delete_job():
+    print("Deleting (moving to delete) job: " + crun_jobdir)
+    os.chdir(crun_jobs)
+    sli = crun_jobdir.index("/")
+    deldir = "delete" + crun_jobdir[sli:]
+    subprocess.check_run(["git", "mv", crun_jobdir, deldir])
+    return
+
+def archive_job():
+    print("Archiving (moving to archive) job: " + crun_jobdir)
+    os.chdir(crun_jobs)
+    sli = crun_jobdir.index("/")
+    deldir = "archive" + crun_jobdir[sli:]
+    subprocess.check_run(["git", "mv", crun_jobdir, deldir])
+    return
+
+def nuke_job():
+    print("Nuking job: " + crun_jobdir)
+    rdir = os.path.join(crun_results,crun_jobdir)
+    shutil.rmtree(crun_jobpath, ignore_errors=True, onerror=None)
+    shutil.rmtree(rdir, ignore_errors=True, onerror=None)
+    return
+
 def cancel_job():
     print("Canceling job: " + crun_jobdir)
+    write_job_file("job.canceled", timestamp())
     slf = os.path.join(crun_jobpath, "job.slurmid")
     slid = read_string(slf)
+    if slid == "" or slid == None:
+        print("No slurm id found -- maybe didn't submit properly?")
+        exit(1)
+    print("slurm id to cancel: ", slid)
     try:
         result = subprocess.check_output(["scancel",slid])
     except CalledProcessError:
         print("Failed to cancel job")
         exit(5)
+    
+def stat_job():
+    print("Stat job: " + crun_jobdir)
+    slf = os.path.join(crun_jobpath, "job.slurmid")
+    slid = read_string(slf)
+    if slid == "" or slid == None:
+        print("No slurm id found -- maybe didn't submit properly?")
+        exit(1)
+    print("slurm id to stat: ", slid)
+    try:
+        result = subprocess.check_output(["squeue","-j",slid,"-o","%T"], universal_newlines=True)
+    except CalledProcessError:
+        print("Failed to stat job")
+        exit(5)
+    stat = result.splitlines()[1].rstrip()
+    print("status: " + stat)
+    write_string(os.path.join(crun_jobpath, "job.status"), stat)
     
 def commit_jobs():
     commit = str(crun_jobs_repo.heads.master.commit)
@@ -216,6 +261,7 @@ if os.path.isfile(crun_jobs_shafn):
                 com_results = True
                 com_jobs = True
             if crun_jobfnm == "crcmd.stat":
+                stat_job()
                 com_jobs = True
             if crun_jobfnm == "crcmd.cancel":
                 cancel_job()

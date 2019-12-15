@@ -191,13 +191,17 @@ def active_jobs_list():
         jdir = os.path.join(act, jobid, crun_proj)
         jst = os.path.join(jdir, "job.start")
         jed = os.path.join(jdir, "job.end")
+        jcan = os.path.join(jdir, "job.canceled")
+        jstat= os.path.join(jdir, "job.status")
         slid = os.path.join(jdir, "job.slurmid")
-        argf = os.path.join(jdir, "job.args")
-        argl = read_strings(argf)
+        argl = read_strings(os.path.join(jdir, "job.args"))
         args = ""
         for ar in argl:
             args += ar.rstrip()
-        if os.path.isfile(jst) and os.path.isfile(slid):
+        if os.path.isfile(jcan):
+            ed = read_string(jcan)
+            jobs_done.append([jobid, slurmid, "Canceled", st, ed, args])
+        elif os.path.isfile(jst) and os.path.isfile(slid):
             slurmid = read_string(slid)
             st = read_string(jst)
             if os.path.isfile(jed):
@@ -356,30 +360,35 @@ elif (cmd == "stat"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
+    crun_jobid = sys.argv[2]
     write_cmd(crun_jobid, cmd, argslist())
     exit(0)
 elif (cmd == "cancel"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
+    crun_jobid = sys.argv[2]
     write_cmd(crun_jobid, cmd, argslist())
     exit(0)
 elif (cmd == "nuke"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
+    crun_jobid = sys.argv[2]
     write_cmd(crun_jobid, cmd, argslist())
     exit(0)
 elif (cmd == "archive"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
+    crun_jobid = sys.argv[2]
     write_cmd(crun_jobid, cmd, argslist())
     exit(0)
 elif (cmd == "delete"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
+    crun_jobid = sys.argv[2]
     write_cmd(crun_jobid, cmd, argslist())
 elif (cmd == "pull"):
     print("pulling current results from: " + crun_results)
