@@ -12,6 +12,7 @@ import shutil
 import json
 from pathlib import Path
 import getpass
+import datetime
 
 def open_clustername(fnm):
     global crun_clust
@@ -112,6 +113,21 @@ def pull_jobs_repo():
     except git.exc.GitCommandError as e:
         print("Could not execute a git pull on jobs repository " + crun_jobs + str(e))
 
+def pull_results_repo():
+    global crun_results_repo
+    # does git pull on results repository activates crun_results_repo
+    assert_repo()
+    try:
+        crun_results_repo = Repo(crun_results)
+    except Exception as e:
+        print("The directory is not a valid crun results git working directory: " + crun_results + "! " + str(e))
+        exit(3)
+    # print(crun_results_repo)
+    try:
+        crun_results_repo.remotes.origin.pull()
+    except git.exc.GitCommandError as e:
+        print("Could not execute a git pull on results repository " + crun_results + str(e))
+
 def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wc
     p = subprocess.check_output(["git","ls-files"], universal_newlines=True)
@@ -121,7 +137,6 @@ def copy_to_jobs(new_job):
         shutil.copyfile(f, jf)
         crun_jobs_repo.git.add(jf)
 
-        
 def write_cmd(jobid, cmd, cmdstr):
     job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
     cmdfn = os.path.join(job_dir, "crcmd." + cmd)
@@ -133,7 +148,19 @@ def write_cmd(jobid, cmd, cmdstr):
     crun_jobs_repo.index.commit("Command: " + cmd + " job: " + jobid)
     crun_jobs_repo.remotes.origin.push()
     print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
-        
+
+def timestamp():
+    return datetime.datetime.now()
+
+# argslist returns post-command args as newline separated string 
+# for use in command files
+def argslist():
+    return "\n".join(sys.argv[3:])
+
+# active_jobs_list generates lists of active jobs with statuses    
+def active_jobs_list():
+    None
+    
 #########################################
 # repo mgmt
           
@@ -217,14 +244,21 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t you *must* have a crunsub.py script in the project dir that will create a crun.sh that the")
     print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
     print("\t crun github source repository.\n")
-    print("update\t trigger server to checkin current job results to results git repository\n")
-    print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server \n")
-    print("\t and client -- on client you should specify the remote-url arg which should be: \n")
+    print("update\t [files...] trigger server to checkin current job results to results git repository")
+    print("\t with no args uses crunres.py script to generate list, else uses files"\n)
+    print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
+    print("\t and client -- on client you should specify the remote-url arg which should be:")
     print("\t just your username and server name on cluster: username@cluster.my.university.edu\n")
+    print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
     exit(1)
 
-if (sys.argv[1] == "submit"):
+cmd = sys.argv[1]    
+
+# always pull except when making new proj    
+if cmd != "newproj":
     pull_jobs_repo()
+
+if (cmd == "submit"):
     new_jobid()
     new_job = os.path.join(crun_jobs, "active", crun_jobid, crun_proj) # add proj subdir so build works
     copy_to_jobs(new_job)
@@ -247,15 +281,34 @@ if (sys.argv[1] == "submit"):
     crun_jobs_repo.index.commit("Committing launch of job: " + crun_jobid)
     crun_jobs_repo.remotes.origin.push()
     exit(0)
-elif (sys.argv[1] == "cancel"):
+elif (cmd == "cancel"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    write_cmd(crun_jobid, cmd, argslist())
     exit(0)
-elif (sys.argv[1] == "nuke"):
+elif (cmd == "nuke"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    write_cmd(crun_jobid, cmd, argslist())
     exit(0)
-elif (sys.argv[1] == "archive"):
+elif (cmd == "archive"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    write_cmd(crun_jobid, cmd, argslist())
     exit(0)
-elif (sys.argv[1] == "delete"):
+elif (cmd == "delete"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    write_cmd(crun_jobid, cmd, argslist())
+elif (cmd == "pull"):
+    print("pulling current results from: " + crun_results)
+    pull_results_repo()
     exit(0)
-elif (sys.argv[1] == "update"):
+elif (cmd == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
         print("Updating all running jobs")
@@ -263,13 +316,12 @@ elif (sys.argv[1] == "update"):
         # hmm. this is a bit tricky as we don't know what is running really.
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
-        write_cmd(crun_jobid, "update", "#")
+        write_cmd(crun_jobid, "update", timestamp())
     else:
         crun_jobid = sys.argv[2]
-        flist = "\n".join(sys.argv[3:])
-        write_cmd(crun_jobid, "update", flist)
+        write_cmd(crun_jobid, "update", argslist())
     exit(0)
-elif (sys.argv[1] == "newproj"):
+elif (cmd == "newproj"):
     if len(sys.argv) < 3:
         print("newproj command requires name of project")
         exit(1)
