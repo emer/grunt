@@ -9,6 +9,7 @@ import sys
 import re
 import shutil
 import glob
+import datetime
 
 # turn this on to see more verbose debug messages
 crun_debug = False
@@ -61,6 +62,25 @@ def get_paths(job_file):
     crun_jobfnm = file_split[1]
     crun_jobid = os.path.split(crun_jobdir)[1]
 
+def write_string(fnm, stval):
+    with open(fnm,"w") as f:
+        f.write(stval + "\n")
+
+def read_string(fnm):
+    # reads a single string from file and strips any newlines 
+    with open(fnm, "r") as f:
+        val = str(f.readline()).rstrip()
+    return val
+
+def read_strings(fnm):
+    # reads multiple strings
+    with open(fnm, "r") as f:
+        val = f.readlines()
+    return val
+
+def timestamp():
+    return str(datetime.datetime.now())
+
 # add job files adds all files named job.* in current dir
 def add_job_files(jobid):
     jobfiles = "\n".join(glob.glob("job.*"))
@@ -91,7 +111,7 @@ def submit_job():
     return
 
 def update_job():
-    print("Updating job: " + crun_job)
+    print("Updating job: " + crun_jobdir)
     os.chdir(crun_jobpath)
     if (not os.path.isfile("crunres.py")):
         print("Error: crunres.py results listing script not found -- MUST be present and checked into git!")
@@ -109,6 +129,16 @@ def update_job():
     add_job_files(crun_jobid)
     return
 
+def cancel_job():
+    print("Canceling job: " + crun_jobdir)
+    slf = os.path.join(crun_jobpath, "job.slurmid")
+    slid = read_string(slf)
+    try:
+        result = subprocess.check_output(["scancel",slid])
+    except CalledProcessError:
+        print("Failed to cancel job")
+        exit(5)
+    
 def commit_jobs():
     commit = str(crun_jobs_repo.heads.master.commit)
     with open(crun_jobs_shafn, "w") as f:
@@ -185,6 +215,23 @@ if os.path.isfile(crun_jobs_shafn):
                 update_job()
                 com_results = True
                 com_jobs = True
+            if crun_jobfnm == "crcmd.stat":
+                com_jobs = True
+            if crun_jobfnm == "crcmd.cancel":
+                cancel_job()
+                com_jobs = True
+            if crun_jobfnm == "crcmd.nuke":
+                nuke_job()
+                com_jobs = True
+                com_results = True
+            if crun_jobfnm == "crcmd.archive":
+                archive_job()
+                com_jobs = True
+                com_results = True
+            if crun_jobfnm == "crcmd.delete":
+                delete_job()
+                com_jobs = True
+                com_results = True
     if com_jobs:
         commit_jobs()
     if com_results:

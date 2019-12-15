@@ -81,10 +81,11 @@ crun_jobid = ""
 crun_jobnum = 0
 
 # lists of different jobs -- updated with active_jobs_list at start
-pending_jobs = []
-running_jobs = []
-done_jobs = []
-jobs_header = ["JobId", "SlurmId", "Status", "Start", "End", "Args"]
+jobs_pending = []
+jobs_running = []
+jobs_done = []
+jobs_header =     ["JobId", "SlurmId", "Status", "Start", "End", "Args"]
+jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "======="]
 
 def new_jobid():
     global crun_jobnum, crun_jobid
@@ -150,15 +151,15 @@ def write_cmd(jobid, cmd, cmdstr):
     crun_jobs_repo.remotes.origin.push()
     print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
 
-def write_string(fnm, stval):
-    with open(fnm,"w") as f:
-        f.write(stval + "\n")
-
 def write_csv(fnm, header, data):
     with open(fnm, 'w') as csvfile: 
         csvwriter = csv.writer(csvfile) 
         csvwriter.writerow(header) 
         csvwriter.writerows(data)
+
+def write_string(fnm, stval):
+    with open(fnm,"w") as f:
+        f.write(stval + "\n")
 
 def read_string(fnm):
     # reads a single string from file and strips any newlines 
@@ -173,7 +174,7 @@ def read_strings(fnm):
     return val
 
 def timestamp():
-    return datetime.datetime.now()
+    return str(datetime.datetime.now())
 
 # argslist returns post-command args as newline separated string 
 # for use in command files
@@ -182,7 +183,7 @@ def argslist():
 
 # active_jobs_list generates lists of active jobs with statuses    
 def active_jobs_list():
-    global pending_jobs, running_jobs, done_jobs
+    global jobs_pending, jobs_running, jobs_done
     act = os.path.join(crun_jobs, "active")
     for jobid in os.listdir(act):
         if not jobid.startswith(crun_userid):
@@ -201,15 +202,27 @@ def active_jobs_list():
             st = read_string(jst)
             if os.path.isfile(jed):
                 ed = read_string(jed)
-                done_jobs.append([jobid, slurmid, "Done", st, ed, args])
+                jobs_done.append([jobid, slurmid, "Done", st, ed, args])
             else:
-                running_jobs.append([jobid, slurmid, "Running", st, "", args])
+                jobs_running.append([jobid, slurmid, "Running", st, "", args])
         else:
-            pending_jobs.append([jobid, "", "Pending", "", "", args])
-    write_csv("jobs.pending", jobs_header, pending_jobs) 
-    write_csv("jobs.running", jobs_header, running_jobs) 
-    write_csv("jobs.done", jobs_header, done_jobs) 
+            jobs_pending.append([jobid, "", "Pending", "", "", args])
+    write_csv("jobs.pending", jobs_header, jobs_pending) 
+    write_csv("jobs.running", jobs_header, jobs_running) 
+    write_csv("jobs.done", jobs_header, jobs_done) 
 
+# active_jobs_list generates lists of active jobs with statuses    
+def print_jobs(jobs_list, desc):
+    print("\n################################\n#  " + desc)
+    jl = jobs_list.copy()
+    jl.insert(0, jobs_header)
+    jl.insert(1, jobs_header_sep)
+    s = [[str(e) for e in row] for row in jl]
+    lens = [max(1,max(map(len, col))) for col in zip(*s)]
+    fmt = '\t'.join('{{:{}s}}'.format(x) for x in lens)
+    table = [fmt.format(*row) for row in s]
+    print('\n'.join(table))
+    print()
     
 #########################################
 # repo mgmt
@@ -293,6 +306,8 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t you *must* have a crunsub.py script in the project dir that will create a crun.sh that the")
     print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
     print("\t crun github source repository.\n")
+    print("jobs\t [done] shows a list of the pending and active jobs by default or done jobs if done\n")
+    print("stat\t pings the server to checkin updated job status files\n")
     print("update\t [files...] trigger server to checkin current job results to results git repository")
     print("\t with no args uses crunres.py script to generate list, else uses files\n")
     print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
@@ -328,6 +343,20 @@ if (cmd == "submit"):
     crun_jobs_repo.git.add(os.path.join(new_job,'crun.sh'))
     crun_jobs_repo.index.commit("Committing launch of job: " + crun_jobid)
     crun_jobs_repo.remotes.origin.push()
+    exit(0)
+elif (cmd == "jobs"):
+    if len(sys.argv) < 3:
+        print_jobs(jobs_pending, "Pending Jobs")
+        print_jobs(jobs_running, "Running Jobs")
+        exit(1)
+    else:
+        print_jobs(jobs_done, "Done Jobs")
+    exit(0)
+elif (cmd == "stat"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    write_cmd(crun_jobid, cmd, argslist())
     exit(0)
 elif (cmd == "cancel"):
     if len(sys.argv) < 3:

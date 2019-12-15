@@ -22,6 +22,7 @@ f.write("#SBATCH --time=24:00:00\n")  # number of hours
 f.write("#SBATCH -n 1\n")   # number of tasks total (mpi processors)
 f.write("#SBATCH --ntasks-per-node=1\n")
 f.write("#SBATCH --cpus-per-task=1\n")  # threads
+f.write("#SBATCH --output=job.out\n") # expected output file
 f.write("#SBATCH --qos=blanca-ccn\n")
 f.write("#SBATCH --mail-type=FAIL\n")
 f.write("#SBATCH --mail-user=" + crun_user + "\n")
