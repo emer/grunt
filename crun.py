@@ -147,6 +147,13 @@ def print_job_out(jobid):
     out = read_strings(job_out)
     print("".join(out))
         
+def link_results(jobid):
+    res = os.path.join(crun_results, "active", jobid, crun_proj)
+    dst = os.path.join("cresults", jobid)
+    os.makedirs("cresults")
+    os.symlink(res, dst, target_is_directory=False)
+    print("\nlinked: " + res + " -> " + dst + "\n")
+        
 def write_cmd(jobid, cmd, cmdstr):
     job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
     cmdfn = os.path.join(job_dir, "crcmd." + cmd)
@@ -337,6 +344,8 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t with no files listed uses crunres.py script to generate list, else uses files")
     print("\t with no jobid it does generic update on all running jobs\n")
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
+    print("link\t <jobid...> make symbolic links into local cresults/jobid for job results")
+    print("\t this makes it easier to access the results\n")
     print("nuke\t <jobid...> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
     print("delete\t <jobid...> moves job directory from active to delete subdir")
@@ -445,6 +454,14 @@ elif (cmd == "delete"):
 elif (cmd == "pull"):
     print("pulling current results from: " + crun_results)
     pull_results_repo()
+    exit(0)
+elif (cmd == "link"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    for jb in sys.argv[2:]:
+        crun_jobid = jb
+        link_results(crun_jobid)
     exit(0)
 elif (cmd == "update"):
     pull_jobs_repo()
