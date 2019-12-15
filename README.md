@@ -18,8 +18,7 @@ pip3 install --user gitpython
 
 ## Client side
 
-* Ensure that `crun.py` is on your executable path (e.g., make a symbolic link to it in your own ~/bin dir)
-
+* Ensure that `crun.py` is on your executable path (e.g., make a symbolic link to it in your own ~/bin dir if that is on your `$PATH` -- you can name it just `crun` to make it easier to type.)
 
 ## Server side
 
