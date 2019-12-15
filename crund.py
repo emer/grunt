@@ -6,7 +6,6 @@
 
 import getpass
 import os
-from os import listdir
 import time
 import subprocess
 from pathlib import Path
@@ -14,9 +13,8 @@ from pathlib import Path
 def open_clustername(fnm):
     global crun_clust
     if os.path.isfile(fnm):
-        f = open(fnm, "r")
-        crun_clust = str(f.readline()).rstrip()
-        f.close()
+        with open(fnm, "r") as f:
+            crun_clust = str(f.readline()).rstrip()
         print("cluster is: " + crun_clust + " from: " + fnm)
         return True
     else:
@@ -28,9 +26,8 @@ def get_cluster():
         df = os.path.join(str(Path.home()), ".crun.defcluster")
         if not open_clustername(df):
             cnm = str(input("enter name of default cluster to use: "))
-            f = open(df, "w")
-            f.write(cnm + "\n")
-            f.close()
+            with open(df, "w") as f:
+                f.write(cnm + "\n")
             
 # crun_clust is cluster name -- default is in ~.crun.defcluster
 crun_clust = ""
@@ -50,11 +47,9 @@ crun_wc = os.path.join(crun_root, "wc", crun_clust, crun_user)
 print("crun_wc: " + crun_wc)
 
 while True:
-    for f in listdir(crun_wc):
-        # print(f)
+    for f in os.listdir(crun_wc):
         crun_proj = os.path.join(crun_wc,f)
         if os.path.isdir(crun_proj):
-            # print("Polling " + crun_proj)
             subprocess.call(["python3","./crund_sub.py", crun_proj])
     time.sleep(10)
     

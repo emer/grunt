@@ -71,10 +71,8 @@ def add_job_files(jobid):
     crun_jobs_repo.remotes.origin.push()
 
 def write_job_file(fname, content):
-    f = open("job.slurmid", "w")
-    f.write(str(result.group(1)))
-    f.flush()
-    f.close()
+    with open("job.slurmid", "w") as f:
+        f.write(str(result.group(1)))
 
 def submit_job():
     print("Submitting submit job: " + crun_job)
@@ -113,9 +111,8 @@ def update_job():
 
 def commit_jobs():
     commit = str(crun_jobs_repo.heads.master.commit)
-    f = open(crun_jobs_shafn, "w")
-    f.write(commit)
-    f.close()
+    with open(crun_jobs_shafn, "w") as f:
+        f.write(commit)
     crun_jobs_repo.git.add(crun_jobs_shafn)
     crun_jobs_repo.index.commit("Processed job submissions up to commit " + commit)
     crun_jobs_repo.remotes.origin.push()
@@ -123,9 +120,8 @@ def commit_jobs():
     
 def commit_results():
     commit = str(crun_results_repo.heads.master.commit)
-    f = open(crun_results_shafn, "w")
-    f.write(commit)
-    f.close()
+    with open(crun_results_shafn, "w") as f:
+        f.write(commit)
     crun_results_repo.git.add(crun_results_shafn)
     crun_results_repo.index.commit("Processed job results up to commit " + commit)
     crun_results_repo.remotes.origin.push()
@@ -166,9 +162,8 @@ crun_results_repo.remotes.origin.pull()
 # Check if we have a valid commit sha1 hash as the last processed, so that we can pickup launching from there.
 
 if os.path.isfile(crun_jobs_shafn):
-    f = open(crun_jobs_shafn, "r")
-    last_processed_commit_hash = f.readline()
-    f.close()
+    with open(crun_jobs_shafn, "r") as f:
+        last_processed_commit_hash = f.readline()
     check_for_updates = True
     com_jobs = False
     com_results = False
@@ -197,17 +192,15 @@ if os.path.isfile(crun_jobs_shafn):
     exit(0)    
 else:
     print(crun_jobs_repo.heads.master.commit)
-    f = open(crun_jobs_shafn, "a")
-    f.write(str(crun_jobs_repo.heads.master.commit))
-    f.close()
+    with open(crun_jobs_shafn, "a") as f:
+        f.write(str(crun_jobs_repo.heads.master.commit))
     crun_jobs_repo.git.add(crun_jobs_shafn)
     crun_jobs_repo.index.commit("This is the first time to poll this project, so write latest commit as reference")
     crun_jobs_repo.remotes.origin.push()
     print(crun_jobs_repo.heads.master.commit)
 
-    f = open(crun_results_shafn, "a")
-    f.write(str(crun_results_repo.heads.master.commit))
-    f.close()
+    with open(crun_results_shafn, "a") as f:
+        f.write(str(crun_results_repo.heads.master.commit))
     crun_results_repo.git.add(crun_results_shafn)
     crun_results_repo.index.commit("This is the first time to poll this project, so write latest commit as reference")
     crun_results_repo.remotes.origin.push()
