@@ -83,7 +83,43 @@ where the 3rd arg there is your user name and server -- you should be able to ss
 
 # Usage
 
-type `crun.py help` to see docs for all the commands.
+type `crun.py help` to see docs for all the commands:
+
+```
+submit	 [args] submits git controlled files in current dir to jobs working dir:
+	 ~/crun/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
+	 which you can refer to later for notes about the job or use in your scripts.
+	 git commit triggers update of server git repo, and crund daemon then submits the new job.
+	 you *must* have a crunsub.py script in the project dir that will create a crun.sh that the
+	 server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in
+	 crun github source repository.
+
+jobs	 [done] shows a list of the pending and active jobs by default or done jobs if done
+
+stat	 [jobid] pings the server to check status and update job status files
+	 on all running and pending jobs if no job specified
+
+out	 <jobid> displays the job.out job output for given job
+
+update	 [jobid] [files...] checkin current job results to results git repository
+	 with no files listed uses crunres.py script to generate list, else uses files
+	 with no jobid it does generic update on all running jobs
+
+pull	 grab any updates to jobs and results repos (done for any cmd)
+
+nuke	 <jobid...> deletes given job directory (jobs and results) -- use carefully!
+	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
+
+delete	 <jobid...> moves job directory from active to delete subdir
+	 useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
+
+archive	 <jobid...> moves job directory from active to archive subdir
+	 useful for removing clutter from active, and preserving important but non-current results
+
+newproj	 <projname> [remote-url] creates new project repositories -- for use on both server
+	 and client -- on client you should specify the remote-url arg which should be:
+	 just your username and server name on cluster: username@cluster.my.university.edu
+```
 
 # `crunsub.py`
 
