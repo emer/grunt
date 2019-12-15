@@ -12,7 +12,7 @@ import glob
 import datetime
 
 # turn this on to see more verbose debug messages
-crun_debug = False
+crun_debug = True
 
 # crun_wc is the working dir for project: ~/crun/wc/cluster/username/projname
 crun_wc = ""
@@ -99,16 +99,15 @@ def submit_job():
     os.chdir(crun_jobpath)
     try:
         result = subprocess.check_output(["sbatch",crun_jobfnm])
-    except CalledProcessError:
+    except subprocess.CalledProcessError:
         print("Failed to submit job script")
-        exit(5)
+        return
     prog = re.compile('.*Submitted batch job (\d+).*')
     result = prog.match(str(result))
     slurmid = result.group(1)
     write_job_file("job.slurmid", slurmid)
     print("Slurm job id: " + slurmid)
     add_job_files(crun_jobid)
-    return
 
 def update_job():
     print("Updating job: " + crun_jobdir)
@@ -127,45 +126,50 @@ def update_job():
         print("added results: " + rf)
         crun_results_repo.git.add(os.path.join(crun_jobdir,f))
     add_job_files(crun_jobid)
-    return
 
 def delete_job():
     print("Deleting (moving to delete) job: " + crun_jobdir)
-    os.chdir(crun_jobs)
+    jdir = os.path.split(crun_jobdir)[0]
     sli = crun_jobdir.index("/")
-    deldir = "delete" + crun_jobdir[sli:]
-    subprocess.check_run(["git", "mv", crun_jobdir, deldir])
-    return
+    deldir = "delete" + jdir[sli:]
+    os.chdir(crun_jobs)
+    subprocess.run(["git", "mv", jdir, deldir])
+    os.chdir(crun_results)
+    subprocess.run(["git", "mv", jdir, deldir])
 
 def archive_job():
     print("Archiving (moving to archive) job: " + crun_jobdir)
-    os.chdir(crun_jobs)
+    jdir = os.path.split(crun_jobdir)[0]
     sli = crun_jobdir.index("/")
-    deldir = "archive" + crun_jobdir[sli:]
-    subprocess.check_run(["git", "mv", crun_jobdir, deldir])
-    return
+    deldir = "archive" + jdir[sli:]
+    os.chdir(crun_jobs)
+    subprocess.run(["git", "mv", jdir, deldir])
+    os.chdir(crun_results)
+    subprocess.run(["git", "mv", jdir, deldir])
 
 def nuke_job():
     print("Nuking job: " + crun_jobdir)
-    rdir = os.path.join(crun_results,crun_jobdir)
-    shutil.rmtree(crun_jobpath, ignore_errors=True, onerror=None)
-    shutil.rmtree(rdir, ignore_errors=True, onerror=None)
-    return
+    jdir = os.path.split(crun_jobdir)[0]
+    os.chdir(crun_jobs)
+    subprocess.run(["git", "rm", "-r", "-f", jdir])
+    os.chdir(crun_results)
+    subprocess.run(["git", "rm", "-r", "-f", jdir])
 
 def cancel_job():
     print("Canceling job: " + crun_jobdir)
     write_job_file("job.canceled", timestamp())
     slf = os.path.join(crun_jobpath, "job.slurmid")
     slid = read_string(slf)
+    add_job_files(crun_jobid)
     if slid == "" or slid == None:
         print("No slurm id found -- maybe didn't submit properly?")
-        exit(1)
+        return
     print("slurm id to cancel: ", slid)
     try:
         result = subprocess.check_output(["scancel",slid])
-    except CalledProcessError:
+    except subprocess.CalledProcessError:
         print("Failed to cancel job")
-        exit(5)
+        return
     
 def stat_job():
     print("Stat job: " + crun_jobdir)
@@ -173,34 +177,32 @@ def stat_job():
     slid = read_string(slf)
     if slid == "" or slid == None:
         print("No slurm id found -- maybe didn't submit properly?")
-        exit(1)
     print("slurm id to stat: ", slid)
     try:
         result = subprocess.check_output(["squeue","-j",slid,"-o","%T"], universal_newlines=True)
-    except CalledProcessError:
+    except subprocess.CalledProcessError:
         print("Failed to stat job")
-        exit(5)
+        return
     stat = result.splitlines()[1].rstrip()
     print("status: " + stat)
     write_string(os.path.join(crun_jobpath, "job.status"), stat)
+    add_job_files(crun_jobid)
     
 def commit_jobs():
     commit = str(crun_jobs_repo.heads.master.commit)
     with open(crun_jobs_shafn, "w") as f:
         f.write(commit)
     crun_jobs_repo.git.add(crun_jobs_shafn)
-    crun_jobs_repo.index.commit("Processed job submissions up to commit " + commit)
+    crun_jobs_repo.index.commit("CRUND: done up to commit " + commit)
     crun_jobs_repo.remotes.origin.push()
-    return
     
 def commit_results():
     commit = str(crun_results_repo.heads.master.commit)
     with open(crun_results_shafn, "w") as f:
         f.write(commit)
     crun_results_repo.git.add(crun_results_shafn)
-    crun_results_repo.index.commit("Processed job results up to commit " + commit)
+    crun_results_repo.index.commit("CRUND: done up to commit " + commit)
     crun_results_repo.remotes.origin.push()
-    return
     
 ###################################################################
 #  starts running here    
@@ -249,10 +251,15 @@ if os.path.isfile(crun_jobs_shafn):
     for cm in crun_jobs_repo.iter_commits(rev=last_to_head):
         if most_recent_head == None:
             most_recent_head = cm
+        if cm.message.startswith("CRUND:"): # skip our own -- key
+            continue
         if crun_debug:
             print("Processing commit " + str(cm))
         for f in cm.stats.files:
+            print(cm.stats)
             get_paths(f)
+            if crun_debug:
+                print("Processing command: " + crun_jobfnm)
             if crun_jobfnm == "crun.sh":
                 submit_job()
                 com_jobs = True
@@ -278,7 +285,7 @@ if os.path.isfile(crun_jobs_shafn):
                 delete_job()
                 com_jobs = True
                 com_results = True
-    if com_jobs:
+    if com_jobs:            
         commit_jobs()
     if com_results:
         commit_results()
