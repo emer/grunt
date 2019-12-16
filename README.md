@@ -50,6 +50,8 @@ ControlPath ~/.ssh/sockets/%r@%h:%p
 
 where `blogin01.rc*` is the start of server host names that you want to do this for.
 
+if you don't have a sockets directory in .ssh create one
+
 Then you can do `screen` locally on your client, ssh into your server, and then kill the terminal -- the screen keeps that session running in the background indefinitely.  use `screen -R` to reconnect to an existing screen session.
 
 # New projects
