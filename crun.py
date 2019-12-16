@@ -152,8 +152,9 @@ def link_results(jobid):
     dst = os.path.join("cresults", jobid)
     if not os.path.isdir("cresults"):
         os.makedirs("cresults")
-    os.symlink(res, dst, target_is_directory=False)
-    print("\nlinked: " + res + " -> " + dst + "\n")
+    if not os.path.isdir(dst):
+        os.symlink(res, dst, target_is_directory=False)
+        print("\nlinked: " + res + " -> " + dst + "\n")
         
 def write_cmd(jobid, cmd, cmdstr):
     job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
@@ -205,6 +206,9 @@ def timestamp():
 def argslist():
     return "\n".join(sys.argv[3:])
 
+def jobid_fm_jobs_list(lst):
+    return lst[0]
+    
 # active_jobs_list generates lists of active jobs with statuses    
 def active_jobs_list():
     global jobs_pending, jobs_running, jobs_done
@@ -238,6 +242,9 @@ def active_jobs_list():
                 jobs_running.append([jobid, slurmid, "Running", slurmstat, sub, st, "", args])
         else:
             jobs_pending.append([jobid, "", "Pending", slurmstat, sub, st, ed, args])
+    jobs_pending.sort(key=jobid_fm_jobs_list)
+    jobs_running.sort(key=jobid_fm_jobs_list)
+    jobs_done.sort(key=jobid_fm_jobs_list)
     write_csv("jobs.pending", jobs_header, jobs_pending) 
     write_csv("jobs.running", jobs_header, jobs_running) 
     write_csv("jobs.done", jobs_header, jobs_done) 
@@ -338,16 +345,17 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t you *must* have a crunsub.py script in the project dir that will create a crun.sh that the")
     print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
     print("\t crun github source repository.\n")
-    print("jobs\t [done] shows a list of the pending and active jobs by default or done jobs if done\n")
+    print("jobs\t [active|done] shows lists of all jobs, or specific subset (active = running, pending)\n")
     print("stat\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
     print("out\t <jobid> displays the job.out job output for given job\n")
     print("update\t [jobid] [files...] checkin current job results to results git repository")
     print("\t with no files listed uses crunres.py script to generate list, else uses files")
-    print("\t with no jobid it does generic update on all running jobs\n")
+    print("\t with no jobid it does generic update on all running jobs")
+    print("\t automatically does link on jobs to make easy to access from orig source\n")
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
     print("link\t <jobid...> make symbolic links into local cresults/jobid for job results")
-    print("\t this makes it easier to access the results\n")
+    print("\t this makes it easier to access the results -- this happens automatically at update\n")
     print("nuke\t <jobid...> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
     print("delete\t <jobid...> moves job directory from active to delete subdir")
@@ -357,7 +365,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
     print("\t and client -- on client you should specify the remote-url arg which should be:")
     print("\t just your username and server name on cluster: username@cluster.my.university.edu\n")
-    exit(1)
+    exit(0)
 
 cmd = sys.argv[1]    
 
@@ -391,11 +399,15 @@ if (cmd == "submit"):
     exit(0)
 elif (cmd == "jobs"):
     if len(sys.argv) < 3:
+        print_jobs(jobs_done, "Done Jobs")
         print_jobs(jobs_pending, "Pending Jobs")
         print_jobs(jobs_running, "Running Jobs")
-        exit(1)
     else:
-        print_jobs(jobs_done, "Done Jobs")
+        if sys.argv[2] == "done":
+            print_jobs(jobs_done, "Done Jobs")
+        else:
+            print_jobs(jobs_pending, "Pending Jobs")
+            print_jobs(jobs_running, "Running Jobs")
     exit(0)
 elif (cmd == "stat"):
     if len(sys.argv) == 2:
@@ -471,13 +483,16 @@ elif (cmd == "update"):
         for jb in jobs_running:
             crun_jobid = jb[0]
             write_cmd(crun_jobid, cmd, timestamp())
+            link_results(crun_jobid)
         commit_cmd(cmd)
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
         write_commit_cmd(crun_jobid, "update", timestamp())
+        link_results(crun_jobid)
     else: # jobs, files
         crun_jobid = sys.argv[2]
         write_commit_cmd(crun_jobid, "update", argslist())
+        link_results(crun_jobid)
     exit(0)
 elif (cmd == "newproj"):
     if len(sys.argv) < 3:
