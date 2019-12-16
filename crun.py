@@ -268,7 +268,7 @@ def add_new_git_dir(repo, path):
     repo.git.add(tmpfn)  # i think git doesn't care about dirs
 
 def set_remote(repo, remote_url):
-    print("attempting to set remote url: " remote_url)
+    print("attempting to set remote url: " + remote_url)
     origin = repo.create_remote('origin', remote_url)
     assert origin.exists()
     origin.fetch()
