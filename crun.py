@@ -152,9 +152,18 @@ def link_results(jobid):
     dst = os.path.join("cresults", jobid)
     if not os.path.isdir("cresults"):
         os.makedirs("cresults")
-    if not os.path.isdir(dst):
+    if not os.path.islink(dst):
         os.symlink(res, dst, target_is_directory=False)
         print("\nlinked: " + res + " -> " + dst + "\n")
+        
+def unlink_results(jobid):
+    res = os.path.join(crun_results, "active", jobid, crun_proj)
+    dst = os.path.join("cresults", jobid)
+    if not os.path.isdir("cresults"):
+        return
+    if os.path.islink(dst):
+        os.unlink(dst)
+        print("\nunlinked: " + dst + "\n")
         
 def write_cmd(jobid, cmd, cmdstr):
     job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
@@ -448,6 +457,7 @@ elif (cmd == "nuke"):
     for jb in sys.argv[2:]:
         crun_jobid = jb
         write_cmd(crun_jobid, cmd, timestamp())
+        unlink_results(crun_jobid)
     commit_cmd(cmd)
     exit(0)
 elif (cmd == "archive"):
@@ -457,6 +467,7 @@ elif (cmd == "archive"):
     for jb in sys.argv[2:]:
         crun_jobid = jb
         write_cmd(crun_jobid, cmd, timestamp())
+        unlink_results(crun_jobid)
     commit_cmd(cmd)
     exit(0)
 elif (cmd == "delete"):
@@ -465,6 +476,7 @@ elif (cmd == "delete"):
         exit(1)
     crun_jobid = sys.argv[2]
     write_commit_cmd(crun_jobid, cmd, timestamp())
+    unlink_results(crun_jobid)
 elif (cmd == "pull"):
     print("pulling current results from: " + crun_results)
     pull_results_repo()
@@ -484,6 +496,8 @@ elif (cmd == "update"):
             crun_jobid = jb[0]
             write_cmd(crun_jobid, cmd, timestamp())
             link_results(crun_jobid)
+        # todo: go through jobs_done, look for case where job.end is later than crcmd.update
+        # and update those -- should be pretty easy!
         commit_cmd(cmd)
     elif len(sys.argv) == 3:
         crun_jobid = sys.argv[2]
