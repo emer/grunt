@@ -163,8 +163,8 @@ def done_job_needs_update(jobid):
     if endtime == None:
         write_string(job_end, timestamp()) # rewrite to avoid 
         return True
-    if endtime > updttime:
-        print("endtime: " + timestamp_fmt(endtime) + " > updtime: " + timestamp_fmt(updttime))
+    if endtime > updtime:
+        print("endtime: " + timestamp_fmt(endtime) + " > updtime: " + timestamp_fmt(updtime))
         return True
     return False
         
@@ -553,6 +553,8 @@ elif (cmd == "update"):
             link_results(grunt_jobid)
         for jb in jobs_done:
             grunt_jobid = jb[0]
+            if jb[2] == "Canceled":
+                continue
             if done_job_needs_update(grunt_jobid):
                 write_cmd(grunt_jobid, cmd, timestamp())
                 link_results(grunt_jobid)
