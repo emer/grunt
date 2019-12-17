@@ -173,6 +173,8 @@ def update_job():
     if not os.path.isdir(rdir):
         os.makedirs(rdir)
     for f in p.splitlines():
+        if len(f) == 0:  # why is it even doing this?
+            continue
         rf = os.path.join(rdir,f)
         shutil.copyfile(f, rf)
         print("added results: " + rf)
@@ -186,7 +188,8 @@ def delete_job():
     os.chdir(grunt_jobs)
     subprocess.run(["git", "mv", jdir, deldir])
     os.chdir(grunt_results)
-    subprocess.run(["git", "mv", jdir, deldir])
+    subprocess.run(["git", "rm", "-r", "-f", jdir])
+    shutil.rmtree(jdir, ignore_errors=True, onerror=None)
 
 def archive_job():
     jdir = os.path.split(grunt_jobdir)[0]
