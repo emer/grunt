@@ -358,11 +358,10 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("usage: pass commands with args as follows:\n")
     print("submit\t [args] submits git controlled files in current dir to jobs working dir:")
     print("\t ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
-    print("\t which you can refer to later for notes about the job or use in your scripts.")
+    print("\t which grunter.py script uses for passing args to job -- use --notes='notes' for descriptive info.")
     print("\t git commit triggers update of server git repo, and grund daemon then submits the new job.")
-    print("\t you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the")
-    print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
-    print("\t grunt github source repository.\n")
+    print("\t you *must* have grunter.py script in the project dir to manage actual submission!")
+    print("\t see example in grunt github source repository.\n")
     print("jobs\t [active|done] shows lists of all jobs, or specific subset (active = running, pending)\n")
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
@@ -393,6 +392,9 @@ if cmd != "newproj":
     active_jobs_list()
 
 if (cmd == "submit"):
+    if (not os.path.isfile("grunter.py")):
+        print("Error: grunter.py grunt extensible runner script needed to submit on server -- configure as neede!")
+        exit(1)
     new_jobid()
     new_job = os.path.join(grunt_jobs, "active", grunt_jobid, grunt_proj) # add proj subdir so build works
     copy_to_jobs(new_job)
@@ -404,14 +406,7 @@ if (cmd == "submit"):
             for arg in sys.argv[2:]:
                 f.write(arg + "\n")
         grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
-    if (not os.path.isfile("gruntsub.py")):
-        print("Error: gruntsub.py submission creation script not found -- MUST be present and checked into git!")
-        exit(1)
-    p = subprocess.run(["python3","./gruntsub.py",grunt_proj,grunt_jobid])
-    if (not os.path.isfile("grunt.sh")):
-        print("Error: gruntsub.py submission creation script did not create a grunt.sh file!")
-        exit(1)
-    grunt_jobs_repo.git.add(os.path.join(new_job,'grunt.sh'))
+    write_cmd(grunt_jobid, cmd, timestamp())
     grunt_jobs_repo.index.commit("Submit job: " + grunt_jobid)
     grunt_jobs_repo.remotes.origin.push()
     exit(0)

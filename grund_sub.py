@@ -240,7 +240,7 @@ if os.path.isfile(grunt_jobs_shafn):
         for f in cm.stats.files:
             if not get_command(f):
                 continue
-            print("grund command: " + grund_cmd + " in: " + grunt_jobdir + " at: " + timestamp())
+            print("grund command: " + grunt_cmd + " in: " + grunt_jobdir + " at: " + timestamp())
             com_jobs = True
             if grunt_cmd == "update":
                 update_job()
