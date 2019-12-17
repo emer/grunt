@@ -151,17 +151,17 @@ def print_job_out(jobid):
         
 def link_results(jobid):
     res = os.path.join(grunt_results, "active", jobid, grunt_proj)
-    dst = os.path.join("cresults", jobid)
-    if not os.path.isdir("cresults"):
-        os.makedirs("cresults")
+    dst = os.path.join("gresults", jobid)
+    if not os.path.isdir("gresults"):
+        os.makedirs("gresults")
     if not os.path.islink(dst):
         os.symlink(res, dst, target_is_directory=False)
         print("\nlinked: " + res + " -> " + dst + "\n")
         
 def unlink_results(jobid):
     res = os.path.join(grunt_results, "active", jobid, grunt_proj)
-    dst = os.path.join("cresults", jobid)
-    if not os.path.isdir("cresults"):
+    dst = os.path.join("gresults", jobid)
+    if not os.path.isdir("gresults"):
         return
     if os.path.islink(dst):
         os.unlink(dst)
@@ -372,7 +372,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t with no jobid it does generic update on all running jobs")
     print("\t automatically does link on jobs to make easy to access from orig source\n")
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
-    print("link\t <jobid...> make symbolic links into local cresults/jobid for job results")
+    print("link\t <jobid...> make symbolic links into local gresults/jobid for job results")
     print("\t this makes it easier to access the results -- this happens automatically at update\n")
     print("nuke\t <jobid...> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
