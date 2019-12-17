@@ -170,5 +170,5 @@ All job relevant output files are named `job.` and generically all `job.*` files
 # TODO
     
 * support `rmtnewproj` command in `grunt` to submit command to run newproj on server
-* 
+* support ranges of jobs, e.g., ore00002...20
 

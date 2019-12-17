@@ -430,7 +430,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t this makes it easier to access the results -- this happens automatically at update\n")
     print("nuke\t <jobid...> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
-    print("delete\t <jobid...> moves job directory from active to delete subdir")
+    print("delete\t <jobid...> moves job directory from active to delete subdir, deletes results")
     print("\t useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case\n")
     print("archive\t <jobid...> moves job directory from active to archive subdir")
     print("\t useful for removing clutter from active, and preserving important but non-current results\n")
@@ -501,33 +501,16 @@ elif (cmd == "out"):
         grunt_jobid = jb
         print_job_out(grunt_jobid)
     exit(0)
-elif (cmd == "nuke"):
+elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
     for jb in sys.argv[2:]:
         grunt_jobid = jb
         write_cmd(grunt_jobid, cmd, timestamp())
-        unlink_results(grunt_jobid)
+        unlink_results(grunt_jobid) # remove from local results
     commit_cmd(cmd)
     exit(0)
-elif (cmd == "archive"):
-    if len(sys.argv) < 3:
-        print(cmd + " requires jobs.. args")
-        exit(1)
-    for jb in sys.argv[2:]:
-        grunt_jobid = jb
-        write_cmd(grunt_jobid, cmd, timestamp())
-        unlink_results(grunt_jobid)
-    commit_cmd(cmd)
-    exit(0)
-elif (cmd == "delete"):
-    if len(sys.argv) < 3:
-        print(cmd + " requires jobs.. args")
-        exit(1)
-    grunt_jobid = sys.argv[2]
-    write_commit_cmd(grunt_jobid, cmd, timestamp())
-    unlink_results(grunt_jobid)
 elif (cmd == "pull"):
     print("pulling current results from: " + grunt_results)
     pull_results_repo()
