@@ -1,38 +1,59 @@
-# crun
+# grunt
 
-General purpose cluster run framework -- scripts that automate running jobs on a cluster
+`grunt` is a git-based run tool, which provides a general-purpose distributed file system with version control (i.e., git) with the infrastructure to run commands on a remote machine, by pushing files to a git repository, and having the remote machine running the daemon (`grund`) polling for updates and running the commands.
+
+The remote machine (e.g., a compute server) hosts the git repository, which is accessed via ssh, and everything is done in user-space, so no root access is required anywhere. Everything is written in python3.
+
+The central principles are:
+
+* There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
+
+* Each project has its own grunt git repositories, on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  All repositories live under `~/grunt/`.
+
+* The primary function is to submit and manage **jobs**, by copying all the relevant source code (and anything else in the local git) to a uniquely-named `jobid` directory under the `jobs` repository, and passing the `submit` command to the local `grunter.py` script ("extended runner").  Typically this submit command submits a job to the server's `slurm` queue, but it can do anything you want.  As the job runs, it can produce **results** files, which can be pushed to a separate, parallel `results` repository, that can be pulled down to the client.
+
+* The client `grunt.py` script communicates *core* commands to the `grund.py` daemon by pushing a `grcmd.<cmdname>` file.  Often the contents is just a timestamp, but could also be details needed for the command.  Other *user* commands are passed on to the user's `grunter.py` script, to support open-ended commands.  The core commands manage the full lifecycle of job and result management.
+
+* The `grunter.py` script ("extended runner") in your local project source dir must support at least two commands: `submit` and `results` -- see the default version in the grunt source repo.  Submit starts the job on the server (e.g., generates a slurm sbatch file and calls `sbatch` on it), and `results` outputs a list of files (one per line) that should be copied over to the `results` repository (make sure no other debugging info is output for that command!).  The sample version also supports slurm `cancel` and `status` commands.
+
+* Any file named `job.*` is added to the `jobs` repository and pushed for every command -- use this to retrieve job state information (e.g., send slurm output to `job.out`, etc).  `job.submit`, `job.start` and `job.end` files are used conventionally to record timestamp for each such event.  `job.args` contains args for the job submission.
 
 # Install
 
 On both client and server (cluster) you first clone the repo wherever you want:
 
 ```bash
-git clone https://github.com/emer/crun.git
+$ git clone https://github.com/emer/grunt.git
 ```
 
-and install gitpython package -- use the `--user` option on the cluster as you typically don't have sudo write ability.
+and install `gitpython` package -- use the `--user` option on the cluster as you typically don't have sudo write ability.
 
 ```bash
-pip3 install --user gitpython
+$ pip3 install --user gitpython
 ```
 
 ## Client side
 
-* Ensure that `crun.py` is on your executable path (e.g., make a symbolic link to it in your own ~/bin dir if that is on your `$PATH` -- you can name it just `crun` to make it easier to type.)
+* Ensure that `grunt.py` is on your executable path (e.g., make a symbolic link to the git source copy in your own `~/bin` dir if that is on your `$PATH` -- you can name it just `grunt` to make it easier to type.)
+
+```bash
+$ ln -s ~/emer/grunt/grunt.py ~/bin/grunt
+```
 
 ## Server side
 
-* You can run directly from git repo -- you don't need to run command from your project dirs.
+* It is easiest to run directly from the git source repo -- you don't need to run command from your project dirs.
 
 * To run daemon, do:
 
 ```bash
-nohup python3 crund.py
+$ nohup python3 gruntd.py
 ```
-or however you run python3 on server.  `crund_sub.py` script must be in the same directory -- it is called for each project polling operation.  The `nohup` keeps it running in the background, and you can look at nohup.out to see what's going on:
+
+or however you run python3 on server.  The `gruntd_sub.py` script must be in the same directory -- it is called for each project polling operation.  The `nohup` keeps it running in the background, and you can look at `nohup.out` to see what's going on:
 
 ```bash
-tail -f nohup.out
+$ tail -f nohup.out
 ```
 
 ## SSH
@@ -50,63 +71,69 @@ ControlPath ~/.ssh/sockets/%r@%h:%p
 
 where `blogin01.rc*` is the start of server host names that you want to do this for.
 
-if you don't have a sockets directory in .ssh create one
+If you don't have a `sockets` directory in .ssh create one
 
-Then you can do `screen` locally on your client, ssh into your server, and then kill the terminal -- the screen keeps that session running in the background indefinitely.  use `screen -R` to reconnect to an existing screen session.
+Then you can do `screen` locally on your client, ssh into your server, and then kill that terminal window -- the screen keeps that session running in the background indefinitely.  use `screen -R` to reconnect to an existing screen session when you need to reconnect the master ssh connection.
 
-# New projects
+# Projects
 
-Each project has its own github repositories on the server, and working copies on the client (and server), that contain all the files for a given project.  These repositories are (wc = working copy):
+Each project has its own git repositories on the server, and working copies on the client (and server), that contain all the files for a given project.  These repositories are (wc = working copy):
 
-* `~/crun/wc/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
+* `~/grunt/wc/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
 
-* `~/crun/wc/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+* `~/grunt/wc/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
 
-The `cluster` is the name of the cluster, which is prompted when you create your first project, and then stored in `~/.crun.defcluster` -- if you have a `crun.cluster` file in the current directory it will override that.
+The `cluster` is the name of the cluster, which is prompted when you create your first project, and then stored in `~/.grunt.defcluster` -- if you have a `grunt.cluster` file in the current directory it will override that.
 
-The `projname` is the directory name where you execute the `crun.py submit` job -- i.e., the directory for your simulation.
+The `projname` is the directory name where you execute the `grunt.py submit` job -- i.e., the directory for your simulation.
 
 The server has the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
 
 * To initialize a new project on the server, run this command (can be done anywhere):
 
 ```bash
-crun.py newproj projname
+$ grunt newproj projname
 ```
 
 * Once that completes, then on the client, do:
 
 ```bash
-crun.py newproj projname username@server.at.university.edu
+$ grunt newproj projname username@server.at.university.edu
 ```
 
 where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
 
 # Usage
 
-type `crun.py help` to see docs for all the commands:
+type `grunt help` to see docs for all the commands:
 
 ```
+usage: pass commands with args as follows:
+
 submit	 [args] submits git controlled files in current dir to jobs working dir:
-	 ~/crun/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
+	 ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
 	 which you can refer to later for notes about the job or use in your scripts.
-	 git commit triggers update of server git repo, and crund daemon then submits the new job.
-	 you *must* have a crunsub.py script in the project dir that will create a crun.sh that the
+	 git commit triggers update of server git repo, and gruntd daemon then submits the new job.
+	 you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the
 	 server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in
-	 crun github source repository.
+	 grunt github source repository.
 
-jobs	 [done] shows a list of the pending and active jobs by default or done jobs if done
+jobs	 [active|done] shows lists of all jobs, or specific subset (active = running, pending)
 
-stat	 [jobid] pings the server to check status and update job status files
+status	 [jobid] pings the server to check status and update job status files
 	 on all running and pending jobs if no job specified
 
 out	 <jobid> displays the job.out job output for given job
 
 update	 [jobid] [files...] checkin current job results to results git repository
-	 with no files listed uses crunres.py script to generate list, else uses files
+	 with no files listed uses gruntres.py script to generate list, else uses files
 	 with no jobid it does generic update on all running jobs
+	 automatically does link on jobs to make easy to access from orig source
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
+
+link	 <jobid...> make symbolic links into local cresults/jobid for job results
+	 this makes it easier to access the results -- this happens automatically at update
 
 nuke	 <jobid...> deletes given job directory (jobs and results) -- use carefully!
 	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
@@ -119,57 +146,29 @@ archive	 <jobid...> moves job directory from active to archive subdir
 
 newproj	 <projname> [remote-url] creates new project repositories -- for use on both server
 	 and client -- on client you should specify the remote-url arg which should be:
-	 just your username and server name on cluster: username@cluster.my.university.edu
+	 just your username and server name on server: username@server.my.university.edu
+
 ```
 
-# `crunsub.py`
+# Details
 
-There must be a `crunsub.py` script in your source project directory, checked into git, that in turn creates a `crun.sh` script that is executed when you submit your job.  See examples in `crun` repository.
+## Standard job.* files
 
-Jobs are submitted using `slurm` and these are `sbatch` scripts.
+All job relevant output files are named `job.` and generically all `job.*` files are committed back to jobs.  Here are some standard job file names, for standard slurm-based `grunter.py` workflow.
 
-# `crunres.py`
+* `grunter.py` `submit` command:
+    + `job.submit` -- timestamp when job was submitted
+    + `job.sbatch` -- slurm sbatch file for running job
+    + `job.slurmid` -- slurm job id number
+    + `job.start` -- timestamp when job actually starts (by `job.sbatch`)
+    + `job.end` -- timestamp when job completes (also `job.sbatch`)
 
-There must also be a `crunres.py` script, the output of which is a list of files that will be captured into the results repository, one on each line.  This allows complete flexibility in terms of what is captured.  There is an example in the repository.
+* `job.canceled` -- timestamp when job canceled by `grunter.py` `cancel` command
 
-# Design
-
-* per project you have separate `clustname/username/projname/jobs` and `clustname/username/projname/results` repos, which have working copies at: `~/crun/wc/clustname/username/projname/jobs/` with `[active|deleted|archived]/jobid/` subdirs under it, and `~/crun/wc/clustname/username/projname/results/` with same sub-structure.  keeping the two repos separate allows jobs one to be monitored by server daemon for input from user, and other is strictly pushed by server and will have more frequent updating etc -- can even cleanup / rebuild results repo while keeping the full jobs history which should be much smaller, etc.
-
-* we need `clustname` to allow client to run same project on different clusters.  the default cluster name is in `~/.crun.defcluster` and loaded and set in crun.py script at startup, and used unless you have a `crun.cluster` file in your project dir, with the name of the cluster in it.
-
-* `jobid` starts with user initials: `rco000314` (probably don't need more than 1m jobs per project?) to facilitate ability to grab jobs from other users and keep job id unique.
-
-* grabbing another users's files involves checking out their `otheruser_projname_jobs` git repo into your own `~/crun/otheruser/...` working copy (hence need to keep `username` in path), which you can then browse.  you can also just follow their results files and use that directly (e.g., import data directly from there), which would be the simplest way to go (similar to current behavior).  OR you can do a `grab` command to copy over the jobs and results for a specific jobid -- this goes into your own repo and works just as if you had then created the job, except it retains the link to the original user's dir (make a `source.job` file with full path to original user's job).  when you request current data update it grabs from original user's active job output, but checks into your copy of results tree.. :)
-
-* job actually runs in server working copy of `projname/jobs/active/jobid` directory, but update command causes specified results files to be copied over to `projname/results/jobid` and checked in there -- this allows for lots of other output to accumulate in jobs side but you can clearly see what is checked in over in results. in any case, this is needed to have separate repos -- this means a duplication of files but server-side it should be ok.  archive and delete commands can remove any non-checked-in files, so this would only be for active jobs.
-
-* have one client script, `crun` that has different command forms, e.g., `crun submit | cancel | archive` etc -- easier to maintain one script.  user only ever does things in current *source* dir, e.g., `~/ccngit/projname/sims/version` which is a normal github-backed repo of the project source files. `crun` manages the repos behind the scenes.  similar to current clusterrun.
-
-* `crun archive` does a git mv from `~/crun/wc/cluster/username/projname/jobs/active/jobid` to `.../archive/jobid` and likewise for `crun delete` (both also do same for results repo).  if we do this client-side, and server has extra files in jobs dir where it ran, which it will, then it might barf when it does its `git pull`.  maybe there is a git `--force` option to make this work?  need to figure this out -- that would be an easy way to delete all irrelevant files.  otherwise, we'd need to have it write a `archive.job` file and then the server would do it, and you'd have to remember to do a git pull locally..
-
-* `crun nuke` removes jobid directory entirely, but I really don't think we'll need to actually purge from git history -- it is enough to just remove the files so they aren't there cluttering up your space.
-
-* keep design fully "stateful" as much as possible -- avoid overwriting same files, so a basic `git pull` will get everything that is needed.  daemon can iterate over all new directories / files in the pull and do everything there, without risk of overwriting, and no need to check through history of checkins.  do everything with simple text files and no need for data tables etc -- keep it super simple.  file system / dir structure has all the info.
-
-* all job relevant output files are named `job.` and generically all `job.*` files are committed back to jobs.
-    + `job.slurmid` -- generated by the submit_job in `crund_sub.py`
-    + `job.start` -- should be generated by `crun.sh` script (in turn generated by `crunsub.py`) and contains `date` output when job started. 
-    + `job.end` -- likewise has job end timestamp.
-
-* crun command files are all `crcmd.*`:
-    + `crcmd.cancel` -- cancel job
-    + `crcmd.update` -- update files to results
+* `job.args` -- written by `grunt.py` with any extra args (one per line) during `submit` -- the `grunter.py` script uses the contents of this file to pass args to the actual job.
     
-* e.g., to cancel a job, checkin a file named `CANCEL.job` (can write the date into that file for future reference) -- then everyone can just look for that file to see if and when it was cancelled.  in general don't need ALLCAPS for filenames but for CANCEL it might make sense so you can quickly see that job was cancelled.
-
-* main job file is `crun.sh` -- server daemon just does slurm `sbatch crun.sh` or something like that, and checks back in a file named `job.slurmid` that contains the slurm job id for that master job.
-    + need to figure out how to ensure that subsequent slurm jobs are all canceled if master one is cancelled -- then client script just needs to do `scancel  < crun.jobid` to stop everything.
-    + `crunsub.py` script must exist in current dir to create the job sumbission script -- that way we can write various *other* scripts that write useful crun.sh scripts -- keep this all *client* side so server is super simple and generic, and all logic is handled with these client scripts.  has been a pita to keep server side daemon script updated, so this fixes that.
-
-* to trigger update of data files, checkin `crcmd.update` file that optionally has a list of files to update (one per line), or it runs `crunres.py` to get a list based on the project.  The daemon then just does git add, git commit / push on those files into the results repo.  if we end up committing this file multiple times before the daemon gets around to it, it might not be such a big deal -- usu going to be the same files and probably you can be patient enough to not spam yourself..
-
-* to make new server git repos, could have an "outer loop" daemon that just does this in response to checking in a command file in a shared repo, or just have people ssh into server and run a simple command to make it (start with latter and add former if deemed worth it).  One issue is that the client-side config should all be done at same time too, so it would be more convenient to have a single client side command that does everything, automatically..
-
-* write a simple Go library that shows all the active jobid's in a given project and operates on selected item -- import data, cancel etc.  just like current interface, except script does all the work -- GUI just calls script.  will also add script commands into gide (easy!) so you can do it all in there too..
+# TODO
+    
+* support `rmtnewproj` command in `grunt` to submit command to run newproj on server
+* 
 

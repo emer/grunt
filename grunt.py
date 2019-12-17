@@ -1,6 +1,8 @@
 #!/usr/local/bin/python3
 # note: on mac cannot change /usr/bin/ so use /usr/local/bin
-# must do: pip3 install gitpython
+# must do: pip3 install [--user] gitpython
+
+# this is the grunt git-based run tool script: https://github.com/emer/grunt
 
 import sys
 import os
@@ -15,70 +17,70 @@ import getpass
 import datetime
 import csv
 
-def open_clustername(fnm):
-    global crun_clust
+def open_servername(fnm):
+    global grunt_clust
     if os.path.isfile(fnm):
         with open(fnm, "r") as f:
-            crun_clust = str(f.readline()).rstrip()
-        print("cluster is: " + crun_clust + " from: " + fnm)
+            grunt_clust = str(f.readline()).rstrip()
+        print("server is: " + grunt_clust + " from: " + fnm)
         return True
     else:
         return False
 
-def get_cluster():
-    cf = "crun.cluster"
-    if not open_clustername(cf):
-        df = os.path.join(str(Path.home()), ".crun.defcluster")
-        if not open_clustername(df):
-            cnm = str(input("enter name of default cluster to use: "))
+def get_server():
+    cf = "grunt.server"
+    if not open_servername(cf):
+        df = os.path.join(str(Path.home()), ".grunt.defserver")
+        if not open_servername(df):
+            cnm = str(input("enter name of default server to use: "))
             with open(df, "w") as f:
                 f.write(cnm + "\n")
             
-# crun_clust is cluster name -- default is in ~.crun.defcluster
-crun_clust = ""
-get_cluster()
+# grunt_clust is server name -- default is in ~.grunt.defserver
+grunt_clust = ""
+get_server()
 
-# crun_root is ~/crun
-# you can symlink ~/crun somewhere else if you want but let's keep it simple
-crun_root = os.path.join(str(Path.home()), "crun")
-# print ("crun_root: " + crun_root)
+# grunt_root is ~/grunt
+# you can symlink ~/grunt somewhere else if you want but let's keep it simple
+grunt_root = os.path.join(str(Path.home()), "grunt")
+# print ("grunt_root: " + grunt_root)
 
-# crun_user is user name
-crun_user = getpass.getuser()
-# print("crun_user: " + crun_user)
+# grunt_user is user name
+grunt_user = getpass.getuser()
+# print("grunt_user: " + grunt_user)
     
-# crun_userid is short user name, used in jobid's
-crun_userid = crun_user[:3]
-# print("crun_userid: " + crun_userid)
+# grunt_userid is short user name, used in jobid's
+grunt_userid = grunt_user[:3]
+# print("grunt_userid: " + grunt_userid)
     
-# crun_cwd is current working dir path split
-crun_cwd = os.path.split(os.getcwd())
+# grunt_cwd is current working dir path split
+grunt_cwd = os.path.split(os.getcwd())
 
-# crun_proj is current project name = subir name of cwd
-crun_proj = crun_cwd[-1]
+# grunt_proj is current project name = subir name of cwd
+grunt_proj = grunt_cwd[-1]
 
-# crun_wc is the working copy root
-crun_wc = os.path.join(crun_root, "wc", crun_clust, crun_user, crun_proj)
+# grunt_wc is the working copy root
+grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user, grunt_proj)
 
-# crun_jobs is the jobs git working dir for project
-crun_jobs = os.path.join(crun_wc, "jobs")
-# print("crun_jobs: " + crun_jobs)
+# grunt_jobs is the jobs git working dir for project
+grunt_jobs = os.path.join(grunt_wc, "jobs")
+# print("grunt_jobs: " + grunt_jobs)
 
-# crun_jobs_repo is initialized in pull_jobs_repo() and is active git repo handle
-crun_jobs_repo = 0
+# grunt_jobs_repo is initialized in pull_jobs_repo() and is active git repo handle
+grunt_jobs_repo = 0
 
-# crun_results is the results git working dir for project
-crun_results = os.path.join(crun_wc, "results")
-# print("crun_results: " + crun_results)
+# grunt_results is the results git working dir for project
+grunt_results = os.path.join(grunt_wc, "results")
+# print("grunt_results: " + grunt_results)
 
-# crun_results_repo is initialized in pull_results_repo() and is active git repo handle
-crun_results_repo = 0
+# grunt_results_repo is initialized in pull_results_repo() and is active git repo handle
+grunt_results_repo = 0
 
-# crun_jobid is the current jobid code: userid + jobnum
-crun_jobid = ""
+# grunt_jobid is the current jobid code: userid + jobnum
+grunt_jobid = ""
 
-# crun_jobnum is the number for jobid
-crun_jobnum = 0
+# grunt_jobnum is the number for jobid
+grunt_jobnum = 0
 
 # lists of different jobs -- updated with active_jobs_list at start
 jobs_pending = []
@@ -88,49 +90,49 @@ jobs_header =     ["JobId", "SlurmId", "Status", "SlurmStat", "Submit", "Start",
 jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
 
 def new_jobid():
-    global crun_jobnum, crun_jobid
-    jf = os.path.join(crun_jobs, "active", "nextjob.id")
+    global grunt_jobnum, grunt_jobid
+    jf = os.path.join(grunt_jobs, "active", "nextjob.id")
     if os.path.isfile(jf):
         with open(jf, "r+") as f:
-            crun_jobnum = int(f.readline())
+            grunt_jobnum = int(f.readline())
             f.seek(0)
-            f.write(str(crun_jobnum + 1) + "\n")
+            f.write(str(grunt_jobnum + 1) + "\n")
     else:
-        crun_jobnum = 1
+        grunt_jobnum = 1
         with open(jf, "w") as f:
-            f.write(str(crun_jobnum + 1) + "\n")
-    crun_jobid = crun_userid + str(int(crun_jobnum)).zfill(6)
-    print("crun_jobid: " + crun_jobid)
+            f.write(str(grunt_jobnum + 1) + "\n")
+    grunt_jobid = grunt_userid + str(int(grunt_jobnum)).zfill(6)
+    print("grunt_jobid: " + grunt_jobid)
 
 def pull_jobs_repo():
-    global crun_jobs_repo
-    # does git pull on jobs repository activates crun_jobs_repo
+    global grunt_jobs_repo
+    # does git pull on jobs repository activates grunt_jobs_repo
     assert_repo()
     try:
-        crun_jobs_repo = Repo(crun_jobs)
+        grunt_jobs_repo = Repo(grunt_jobs)
     except Exception as e:
-        print("The directory is not a valid crun jobs git working directory: " + crun_jobs + "! " + str(e))
+        print("The directory is not a valid grunt jobs git working directory: " + grunt_jobs + "! " + str(e))
         exit(3)
-    # print(crun_jobs_repo)
+    # print(grunt_jobs_repo)
     try:
-        crun_jobs_repo.remotes.origin.pull()
+        grunt_jobs_repo.remotes.origin.pull()
     except git.exc.GitCommandError as e:
-        print("Could not execute a git pull on jobs repository " + crun_jobs + str(e))
+        print("Could not execute a git pull on jobs repository " + grunt_jobs + str(e))
 
 def pull_results_repo():
-    global crun_results_repo
-    # does git pull on results repository activates crun_results_repo
+    global grunt_results_repo
+    # does git pull on results repository activates grunt_results_repo
     assert_repo()
     try:
-        crun_results_repo = Repo(crun_results)
+        grunt_results_repo = Repo(grunt_results)
     except Exception as e:
-        print("The directory is not a valid crun results git working directory: " + crun_results + "! " + str(e))
+        print("The directory is not a valid grunt results git working directory: " + grunt_results + "! " + str(e))
         exit(3)
-    # print(crun_results_repo)
+    # print(grunt_results_repo)
     try:
-        crun_results_repo.remotes.origin.pull()
+        grunt_results_repo.remotes.origin.pull()
     except git.exc.GitCommandError as e:
-        print("Could not execute a git pull on results repository " + crun_results + str(e))
+        print("Could not execute a git pull on results repository " + grunt_results + str(e))
 
 def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wc
@@ -139,16 +141,16 @@ def copy_to_jobs(new_job):
     for f in p.splitlines():
         jf = os.path.join(new_job,f)
         shutil.copyfile(f, jf)
-        crun_jobs_repo.git.add(jf)
+        grunt_jobs_repo.git.add(jf)
 
 def print_job_out(jobid):
-    job_out = os.path.join(crun_jobs, "active", jobid, crun_proj, "job.out")
+    job_out = os.path.join(grunt_jobs, "active", jobid, grunt_proj, "job.out")
     print("\njob.out: " + job_out + "\n")
     out = read_strings(job_out)
     print("".join(out))
         
 def link_results(jobid):
-    res = os.path.join(crun_results, "active", jobid, crun_proj)
+    res = os.path.join(grunt_results, "active", jobid, grunt_proj)
     dst = os.path.join("cresults", jobid)
     if not os.path.isdir("cresults"):
         os.makedirs("cresults")
@@ -157,7 +159,7 @@ def link_results(jobid):
         print("\nlinked: " + res + " -> " + dst + "\n")
         
 def unlink_results(jobid):
-    res = os.path.join(crun_results, "active", jobid, crun_proj)
+    res = os.path.join(grunt_results, "active", jobid, grunt_proj)
     dst = os.path.join("cresults", jobid)
     if not os.path.isdir("cresults"):
         return
@@ -166,16 +168,16 @@ def unlink_results(jobid):
         print("\nunlinked: " + dst + "\n")
         
 def write_cmd(jobid, cmd, cmdstr):
-    job_dir = os.path.join(crun_jobs, "active", jobid, crun_proj)
-    cmdfn = os.path.join(job_dir, "crcmd." + cmd)
+    job_dir = os.path.join(grunt_jobs, "active", jobid, grunt_proj)
+    cmdfn = os.path.join(job_dir, "grcmd." + cmd)
     with open(cmdfn,"w") as f:
         f.write(cmdstr + "\n")
-    crun_jobs_repo.git.add(cmdfn)
+    grunt_jobs_repo.git.add(cmdfn)
     print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
     
 def commit_cmd(cmd):
-    crun_jobs_repo.index.commit("Command: " + cmd)
-    crun_jobs_repo.remotes.origin.push()
+    grunt_jobs_repo.index.commit("Command: " + cmd)
+    grunt_jobs_repo.remotes.origin.push()
 
 def write_commit_cmd(jobid, cmd, cmdstr):
     write_cmd(jobid, cmd, cmdstr)
@@ -200,11 +202,21 @@ def read_string(fnm):
     return val
 
 def read_strings(fnm):
-    # reads multiple strings
+    # reads multiple strings from file, result is list and strings still have \n at end
     if not os.path.isfile(fnm):
-        return ""
+        return []
     with open(fnm, "r") as f:
         val = f.readlines()
+    return val
+
+def read_strings_strip(fnm):
+    # reads multiple strings from file, result is list of strings with no \n at end
+    if not os.path.isfile(fnm):
+        return []
+    with open(fnm, "r") as f:
+        val = f.readlines()
+        for i, v in enumerate(val):
+            val[i] = v.rstrip()
     return val
 
 def timestamp():
@@ -221,21 +233,18 @@ def jobid_fm_jobs_list(lst):
 # active_jobs_list generates lists of active jobs with statuses    
 def active_jobs_list():
     global jobs_pending, jobs_running, jobs_done
-    act = os.path.join(crun_jobs, "active")
+    act = os.path.join(grunt_jobs, "active")
     for jobid in os.listdir(act):
-        if not jobid.startswith(crun_userid):
+        if not jobid.startswith(grunt_userid):
             continue
-        jdir = os.path.join(act, jobid, crun_proj)
+        jdir = os.path.join(act, jobid, grunt_proj)
         jsub = os.path.join(jdir, "job.submit")
         jst = os.path.join(jdir, "job.start")
         jed = os.path.join(jdir, "job.end")
         jcan = os.path.join(jdir, "job.canceled")
         jstat= os.path.join(jdir, "job.status")
         slid = os.path.join(jdir, "job.slurmid")
-        argl = read_strings(os.path.join(jdir, "job.args"))
-        args = ""
-        for ar in argl:
-            args += ar.rstrip()
+        args = " ".join(read_strings_strip(os.path.join(jdir, "job.args")))
         slurmid = read_string(slid)
         slurmstat = read_string(jstat)
         sub = read_string(jsub)
@@ -291,29 +300,29 @@ def set_remote(repo, remote_url):
     repo.create_head('master', origin.refs.master).set_tracking_branch(origin.refs.master).checkout()
     
 def assert_repo():
-    if os.path.isdir(crun_wc):
+    if os.path.isdir(grunt_wc):
         return
-    print("Error: the working git repository not found for this project at: " + crun_wc)
-    print("you must first create on server using: crun.py newproj " + crun_proj)
-    print("and then create locally: crun.py newproj " + crun_proj + " username@server.at.univ.edu")
+    print("Error: the working git repository not found for this project at: " + grunt_wc)
+    print("you must first create on server using: grunt.py newproj " + grunt_proj)
+    print("and then create locally: grunt.py newproj " + grunt_proj + " username@server.at.univ.edu")
     exit(1)
 
 def init_repos(projnm, remote):
     # creates repositories for given project name
-    # remote is remote origin username -- must create on cluster first
+    # remote is remote origin username -- must create on server first
     # before creating locally!
-    wc = os.path.join(crun_root, "wc", crun_clust, crun_user, projnm)
+    wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user, projnm)
     
     if os.path.isdir(wc):
         return
 
-    bb = os.path.join(crun_root, "bb", crun_clust, crun_user, projnm)
+    bb = os.path.join(grunt_root, "bb", grunt_clust, grunt_user, projnm)
     bb_jobs = os.path.join(bb, "jobs")
     wc_jobs = os.path.join(wc, "jobs")
     bb_res = os.path.join(bb, "results")
     wc_res = os.path.join(wc, "results")
 
-    print("crun creating new working repo: " + wc)
+    print("grunt creating new working repo: " + wc)
 
     if remote == "":
         jobs_bb_repo = Repo.init(bb_jobs, bare=True)
@@ -335,7 +344,7 @@ def init_repos(projnm, remote):
         res_wc_repo.remotes.origin.push()
     else:
         user = remote.split("@")[0]
-        remote_url = remote + ":crun/bb/" + crun_clust + "/" + user + "/" + projnm
+        remote_url = remote + ":grunt/bb/" + grunt_clust + "/" + user + "/" + projnm
         jobs_wc_repo = Repo.init(wc_jobs)
         res_wc_repo = Repo.init(wc_res)
         set_remote(jobs_wc_repo, remote_url + "/jobs")
@@ -345,21 +354,21 @@ def init_repos(projnm, remote):
 # Running starts here
 
 if len(sys.argv) < 2 or sys.argv[1] == "help":
-    print("\ncrun is the cluster run client script for running and mananging jobs via git\n")
+    print("\ngrunt.py is the git-based run tool client script\n")
     print("usage: pass commands with args as follows:\n")
     print("submit\t [args] submits git controlled files in current dir to jobs working dir:")
-    print("\t ~/crun/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
+    print("\t ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
     print("\t which you can refer to later for notes about the job or use in your scripts.")
-    print("\t git commit triggers update of server git repo, and crund daemon then submits the new job.")
-    print("\t you *must* have a crunsub.py script in the project dir that will create a crun.sh that the")
+    print("\t git commit triggers update of server git repo, and gruntd daemon then submits the new job.")
+    print("\t you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the")
     print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
-    print("\t crun github source repository.\n")
+    print("\t grunt github source repository.\n")
     print("jobs\t [active|done] shows lists of all jobs, or specific subset (active = running, pending)\n")
-    print("stat\t [jobid] pings the server to check status and update job status files")
+    print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
     print("out\t <jobid> displays the job.out job output for given job\n")
     print("update\t [jobid] [files...] checkin current job results to results git repository")
-    print("\t with no files listed uses crunres.py script to generate list, else uses files")
+    print("\t with no files listed uses gruntres.py script to generate list, else uses files")
     print("\t with no jobid it does generic update on all running jobs")
     print("\t automatically does link on jobs to make easy to access from orig source\n")
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
@@ -373,7 +382,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t useful for removing clutter from active, and preserving important but non-current results\n")
     print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
     print("\t and client -- on client you should specify the remote-url arg which should be:")
-    print("\t just your username and server name on cluster: username@cluster.my.university.edu\n")
+    print("\t just your username and server name on server: username@server.my.university.edu\n")
     exit(0)
 
 cmd = sys.argv[1]    
@@ -385,26 +394,26 @@ if cmd != "newproj":
 
 if (cmd == "submit"):
     new_jobid()
-    new_job = os.path.join(crun_jobs, "active", crun_jobid, crun_proj) # add proj subdir so build works
+    new_job = os.path.join(grunt_jobs, "active", grunt_jobid, grunt_proj) # add proj subdir so build works
     copy_to_jobs(new_job)
     os.chdir(new_job)
     write_string("job.submit", timestamp())
-    crun_jobs_repo.git.add(os.path.join(new_job,'job.submit'))
+    grunt_jobs_repo.git.add(os.path.join(new_job,'job.submit'))
     if len(sys.argv) > 2:
         with open("job.args","w") as f:
             for arg in sys.argv[2:]:
                 f.write(arg + "\n")
-        crun_jobs_repo.git.add(os.path.join(new_job,'job.args'))
-    if (not os.path.isfile("crunsub.py")):
-        print("Error: crunsub.py submission creation script not found -- MUST be present and checked into git!")
+        grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
+    if (not os.path.isfile("gruntsub.py")):
+        print("Error: gruntsub.py submission creation script not found -- MUST be present and checked into git!")
         exit(1)
-    p = subprocess.run(["python3","./crunsub.py",crun_proj,crun_jobid])
-    if (not os.path.isfile("crun.sh")):
-        print("Error: crunsub.py submission creation script did not create a crun.sh file!")
+    p = subprocess.run(["python3","./gruntsub.py",grunt_proj,grunt_jobid])
+    if (not os.path.isfile("grunt.sh")):
+        print("Error: gruntsub.py submission creation script did not create a grunt.sh file!")
         exit(1)
-    crun_jobs_repo.git.add(os.path.join(new_job,'crun.sh'))
-    crun_jobs_repo.index.commit("Submit job: " + crun_jobid)
-    crun_jobs_repo.remotes.origin.push()
+    grunt_jobs_repo.git.add(os.path.join(new_job,'grunt.sh'))
+    grunt_jobs_repo.index.commit("Submit job: " + grunt_jobid)
+    grunt_jobs_repo.remotes.origin.push()
     exit(0)
 elif (cmd == "jobs"):
     if len(sys.argv) < 3:
@@ -418,19 +427,20 @@ elif (cmd == "jobs"):
             print_jobs(jobs_pending, "Pending Jobs")
             print_jobs(jobs_running, "Running Jobs")
     exit(0)
-elif (cmd == "stat"):
+elif (cmd == "status"):
+    # special support to use active jobs
     if len(sys.argv) == 2:
         for jb in jobs_pending:
-            crun_jobid = jb[0]
-            write_cmd(crun_jobid, cmd, timestamp())
+            grunt_jobid = jb[0]
+            write_cmd(grunt_jobid, cmd, timestamp())
         for jb in jobs_running:
-            crun_jobid = jb[0]
-            write_cmd(crun_jobid, cmd, timestamp())
+            grunt_jobid = jb[0]
+            write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)
     else:           
         for jb in sys.argv[2:]:
-            crun_jobid = jb
-            write_cmd(crun_jobid, cmd, timestamp())
+            grunt_jobid = jb
+            write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)
     exit(0)
 elif (cmd == "out"):
@@ -438,26 +448,17 @@ elif (cmd == "out"):
         print(cmd + " requires jobs.. args")
         exit(1)
     for jb in sys.argv[2:]:
-        crun_jobid = jb
-        print_job_out(crun_jobid)
-    exit(0)
-elif (cmd == "cancel"):
-    if len(sys.argv) < 3:
-        print(cmd + " requires jobs.. args")
-        exit(1)
-    for jb in sys.argv[2:]:
-        crun_jobid = jb
-        write_cmd(crun_jobid, cmd, timestamp())
-    commit_cmd(cmd)
+        grunt_jobid = jb
+        print_job_out(grunt_jobid)
     exit(0)
 elif (cmd == "nuke"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
     for jb in sys.argv[2:]:
-        crun_jobid = jb
-        write_cmd(crun_jobid, cmd, timestamp())
-        unlink_results(crun_jobid)
+        grunt_jobid = jb
+        write_cmd(grunt_jobid, cmd, timestamp())
+        unlink_results(grunt_jobid)
     commit_cmd(cmd)
     exit(0)
 elif (cmd == "archive"):
@@ -465,20 +466,20 @@ elif (cmd == "archive"):
         print(cmd + " requires jobs.. args")
         exit(1)
     for jb in sys.argv[2:]:
-        crun_jobid = jb
-        write_cmd(crun_jobid, cmd, timestamp())
-        unlink_results(crun_jobid)
+        grunt_jobid = jb
+        write_cmd(grunt_jobid, cmd, timestamp())
+        unlink_results(grunt_jobid)
     commit_cmd(cmd)
     exit(0)
 elif (cmd == "delete"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
-    crun_jobid = sys.argv[2]
-    write_commit_cmd(crun_jobid, cmd, timestamp())
-    unlink_results(crun_jobid)
+    grunt_jobid = sys.argv[2]
+    write_commit_cmd(grunt_jobid, cmd, timestamp())
+    unlink_results(grunt_jobid)
 elif (cmd == "pull"):
-    print("pulling current results from: " + crun_results)
+    print("pulling current results from: " + grunt_results)
     pull_results_repo()
     exit(0)
 elif (cmd == "link"):
@@ -486,27 +487,27 @@ elif (cmd == "link"):
         print(cmd + " requires jobs.. args")
         exit(1)
     for jb in sys.argv[2:]:
-        crun_jobid = jb
-        link_results(crun_jobid)
+        grunt_jobid = jb
+        link_results(grunt_jobid)
     exit(0)
 elif (cmd == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
         for jb in jobs_running:
-            crun_jobid = jb[0]
-            write_cmd(crun_jobid, cmd, timestamp())
-            link_results(crun_jobid)
-        # todo: go through jobs_done, look for case where job.end is later than crcmd.update
+            grunt_jobid = jb[0]
+            write_cmd(grunt_jobid, cmd, timestamp())
+            link_results(grunt_jobid)
+        # todo: go through jobs_done, look for case where job.end is later than grcmd.update
         # and update those -- should be pretty easy!
         commit_cmd(cmd)
     elif len(sys.argv) == 3:
-        crun_jobid = sys.argv[2]
-        write_commit_cmd(crun_jobid, "update", timestamp())
-        link_results(crun_jobid)
+        grunt_jobid = sys.argv[2]
+        write_commit_cmd(grunt_jobid, "update", timestamp())
+        link_results(grunt_jobid)
     else: # jobs, files
-        crun_jobid = sys.argv[2]
-        write_commit_cmd(crun_jobid, "update", argslist())
-        link_results(crun_jobid)
+        grunt_jobid = sys.argv[2]
+        write_commit_cmd(grunt_jobid, "update", argslist())
+        link_results(grunt_jobid)
     exit(0)
 elif (cmd == "newproj"):
     if len(sys.argv) < 3:
@@ -519,6 +520,14 @@ elif (cmd == "newproj"):
     init_repos(projnm, remote)
     exit(0)
 else:
-    print("No valid command was given")
+    # generic command -- just pass onto server
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    for jb in sys.argv[2:]:
+        grunt_jobid = jb
+        write_cmd(grunt_jobid, cmd, timestamp())
+    commit_cmd(cmd)
+    exit(0)
     
 
