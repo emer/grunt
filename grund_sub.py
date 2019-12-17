@@ -9,7 +9,7 @@ import subprocess
 from subprocess import Popen, PIPE
 import shutil
 import glob
-import datetime
+from datetime import datetime, timezone
 
 # turn this on to see more verbose debug messages
 grunt_debug = False
@@ -102,9 +102,45 @@ def read_strings_strip(fnm):
             val[i] = v.rstrip()
     return val
 
-def timestamp():
-    return str(datetime.datetime.now())
+def utc_to_local(utc_dt):
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)    
 
+def timestamp_local(dt):
+    # returns a string of datetime object in local time -- for printing
+    return utc_to_local(dt).strftime("%Y-%m-%d %H:%M:%S %Z")
+
+def timestamp_fmt(dt):
+    # returns a string of datetime object formatted in standard timestamp format
+    return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+def parse_timestamp(dtstr):
+    # returns a datetime object from timestamp-formatted string, None if not properly formatted
+    try:
+        dt = datetime.strptime(dtstr, "%Y-%m-%d %H:%M:%S %Z")
+    except ValueError as ve:
+        # print(str(ve))
+        return None
+    return dt
+
+def timestamp():
+    return timestamp_fmt(datetime.now(timezone.utc))
+
+def read_timestamp(fnm):
+    # read timestamp from file -- returns None if file does not exist or timestamp format is invalid
+    if not os.path.isfile(fnm):
+        return None
+    return parse_timestamp(read_string(fnm))
+
+def read_timestamp_to_local(fnm):
+    # read timestamp from file -- if can be converted to local time, then do that, else return string
+    if not os.path.isfile(fnm):
+        return ""
+    dstr = read_string(fnm)
+    dt = parse_timestamp(dstr)
+    if dt == None:
+        return dstr
+    return timestamp_local(dt)
+    
 # add job files adds all files named job.* in current dir
 def add_job_files(jobid):
     os.chdir(grunt_jobpath)

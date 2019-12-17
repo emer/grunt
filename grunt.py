@@ -14,7 +14,7 @@ import shutil
 import json
 from pathlib import Path
 import getpass
-import datetime
+from datetime import datetime, timezone
 import csv
 
 def open_servername(fnm):
@@ -149,6 +149,25 @@ def print_job_out(jobid):
     out = read_strings(job_out)
     print("".join(out))
         
+def done_job_needs_update(jobid):
+    # if job.end is later than grcmd.update (or it doesn't even exist), then needs update
+    jobdir = os.path.join(grunt_jobs, "active", jobid, grunt_proj)
+    updtcmd = os.path.join(jobdir, "grcmd.update")
+    if not os.path.isfile(updtcmd):
+        return True
+    updtime = read_timestamp(updtcmd)
+    if updtime == None:
+        return True
+    job_end = os.path.join(jobdir, "job.end")
+    endtime = read_timestamp(job_end)
+    if endtime == None:
+        write_string(job_end, timestamp()) # rewrite to avoid 
+        return True
+    if endtime > updttime:
+        print("endtime: " + timestamp_fmt(endtime) + " > updtime: " + timestamp_fmt(updttime))
+        return True
+    return False
+        
 def link_results(jobid):
     res = os.path.join(grunt_results, "active", jobid, grunt_proj)
     dst = os.path.join("gresults", jobid)
@@ -218,10 +237,46 @@ def read_strings_strip(fnm):
         for i, v in enumerate(val):
             val[i] = v.rstrip()
     return val
+    
+def utc_to_local(utc_dt):
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)    
+
+def timestamp_local(dt):
+    # returns a string of datetime object in local time -- for printing
+    return utc_to_local(dt).strftime("%Y-%m-%d %H:%M:%S %Z")
+
+def timestamp_fmt(dt):
+    # returns a string of datetime object formatted in standard timestamp format
+    return dt.strftime("%Y-%m-%d %H:%M:%S %Z")
+
+def parse_timestamp(dtstr):
+    # returns a datetime object from timestamp-formatted string, None if not properly formatted
+    try:
+        dt = datetime.strptime(dtstr, "%Y-%m-%d %H:%M:%S %Z")
+    except ValueError as ve:
+        # print(str(ve))
+        return None
+    return dt
 
 def timestamp():
-    return str(datetime.datetime.now())
+    return timestamp_fmt(datetime.now(timezone.utc))
 
+def read_timestamp(fnm):
+    # read timestamp from file -- returns None if file does not exist or timestamp format is invalid
+    if not os.path.isfile(fnm):
+        return None
+    return parse_timestamp(read_string(fnm))
+
+def read_timestamp_to_local(fnm):
+    # read timestamp from file -- if can be converted to local time, then do that, else return string
+    if not os.path.isfile(fnm):
+        return ""
+    dstr = read_string(fnm)
+    dt = parse_timestamp(dstr)
+    if dt == None:
+        return dstr
+    return timestamp_local(dt)
+    
 # argslist returns post-command args as newline separated string 
 # for use in command files
 def argslist():
@@ -247,11 +302,11 @@ def active_jobs_list():
         args = " ".join(read_strings_strip(os.path.join(jdir, "job.args")))
         slurmid = read_string(slid)
         slurmstat = read_string(jstat)
-        sub = read_string(jsub)
-        st = read_string(jst)
-        ed = read_string(jed)
+        sub = read_timestamp_to_local(jsub)
+        st = read_timestamp_to_local(jst)
+        ed = read_timestamp_to_local(jed)
         if os.path.isfile(jcan):
-            ed = read_string(jcan)
+            ed = read_timestamp_to_local(jcan)
             jobs_done.append([jobid, slurmid, "Canceled", slurmstat, sub, st, ed, args])
         elif os.path.isfile(jst) and os.path.isfile(slid):
             if os.path.isfile(jed):
@@ -488,12 +543,19 @@ elif (cmd == "link"):
 elif (cmd == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
+        for jb in jobs_pending:
+            grunt_jobid = jb[0]
+            write_cmd(grunt_jobid, cmd, timestamp())
+            link_results(grunt_jobid)
         for jb in jobs_running:
             grunt_jobid = jb[0]
             write_cmd(grunt_jobid, cmd, timestamp())
             link_results(grunt_jobid)
-        # todo: go through jobs_done, look for case where job.end is later than grcmd.update
-        # and update those -- should be pretty easy!
+        for jb in jobs_done:
+            grunt_jobid = jb[0]
+            if done_job_needs_update(grunt_jobid):
+                write_cmd(grunt_jobid, cmd, timestamp())
+                link_results(grunt_jobid)
         commit_cmd(cmd)
     elif len(sys.argv) == 3:
         grunt_jobid = sys.argv[2]
