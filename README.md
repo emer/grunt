@@ -47,10 +47,10 @@ $ ln -s ~/emer/grunt/grunt.py ~/bin/grunt
 * To run daemon, do:
 
 ```bash
-$ nohup python3 gruntd.py
+$ nohup python3 grund.py &
 ```
 
-or however you run python3 on server.  The `gruntd_sub.py` script must be in the same directory -- it is called for each project polling operation.  The `nohup` keeps it running in the background, and you can look at `nohup.out` to see what's going on:
+or however you run python3 on server.  The `grund_sub.py` script must be in the same directory -- it is called for each project polling operation.  The `nohup` keeps it running in the background, and you can look at `nohup.out` to see what's going on:
 
 ```bash
 $ tail -f nohup.out
@@ -92,7 +92,7 @@ The server has the "remote" git repository for your client, and thus you must fi
 * To initialize a new project on the server, run this command (can be done anywhere):
 
 ```bash
-$ grunt newproj projname
+$ python3 grunt.py newproj projname
 ```
 
 * Once that completes, then on the client, do:
@@ -113,7 +113,7 @@ usage: pass commands with args as follows:
 submit	 [args] submits git controlled files in current dir to jobs working dir:
 	 ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
 	 which you can refer to later for notes about the job or use in your scripts.
-	 git commit triggers update of server git repo, and gruntd daemon then submits the new job.
+	 git commit triggers update of server git repo, and grund daemon then submits the new job.
 	 you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the
 	 server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in
 	 grunt github source repository.

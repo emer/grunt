@@ -359,7 +359,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("submit\t [args] submits git controlled files in current dir to jobs working dir:")
     print("\t ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
     print("\t which you can refer to later for notes about the job or use in your scripts.")
-    print("\t git commit triggers update of server git repo, and gruntd daemon then submits the new job.")
+    print("\t git commit triggers update of server git repo, and grund daemon then submits the new job.")
     print("\t you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the")
     print("\t server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in")
     print("\t grunt github source repository.\n")

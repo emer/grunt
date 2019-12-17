@@ -1,6 +1,6 @@
 #!/usr/local/bin/python3
 # run this as: 
-# nohup python gruntd.py
+# nohup python grund.py
 
 # this is the grunt git-based run daemon script: https://github.com/emer/grunt
 # this is the outer-loop grunt daemon that polls all grunt working repositories
@@ -52,6 +52,6 @@ while True:
     for f in os.listdir(grunt_wc):
         grunt_proj = os.path.join(grunt_wc,f)
         if os.path.isdir(grunt_proj):
-            subprocess.call(["python3","./gruntd_sub.py", grunt_proj])
+            subprocess.call(["python3","./grund_sub.py", grunt_proj])
     time.sleep(10)
     
