@@ -138,8 +138,16 @@ def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wc
     p = subprocess.check_output(["git","ls-files"], universal_newlines=True)
     os.makedirs(new_job)
+    gotGrunter = False
     for f in p.splitlines():
+        if f == "grunter.py":
+            gotGrunter = True
         jf = os.path.join(new_job,f)
+        shutil.copyfile(f, jf)
+        grunt_jobs_repo.git.add(jf)
+    if not gotGrunter:
+        f = "grunter.py"
+        jf = os.path.join(new_job, f)
         shutil.copyfile(f, jf)
         grunt_jobs_repo.git.add(jf)
 
