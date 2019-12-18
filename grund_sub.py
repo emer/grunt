@@ -162,7 +162,7 @@ def list_files(ldir):
             continue
         mtime = timestamp_fmt(datetime.fromtimestamp(os.path.getmtime(fp), timezone.utc))
         sz = os.path.getsize(fp)
-        flist.append([f, mtime, sz])
+        flist.append([f, sz, mtime])
     flist.sort()
     return flist
 

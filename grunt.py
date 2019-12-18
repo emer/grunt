@@ -180,8 +180,10 @@ def print_job_out(jobid):
 def print_job_list(jobid):
     job_ls = os.path.join(grunt_active, jobid, grunt_proj, "job.list")
     fl = read_csv(job_ls, True)
+    for row in fl:
+        row[1] = "{:,}".format(row[1])
     fl.insert(0, file_list_header)
-    fl.insert(1, flie_list_sep)
+    fl.insert(1, file_list_sep)
     s = [[str(e) for e in row] for row in fl]
     lens = [max(1,max(map(len, col))) for col in zip(*s)]
     fmt = '\t'.join('{{:{}s}}'.format(x) for x in lens)
@@ -446,7 +448,7 @@ def list_files(ldir):
             continue
         mtime = timestamp_fmt(datetime.fromtimestamp(os.path.getmtime(fp), timezone.utc))
         sz = os.path.getsize(fp)
-        flist.append([f, mtime, sz])
+        flist.append([f, sz, mtime])
     flist.sort()
     return flist
     
