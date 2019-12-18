@@ -20,6 +20,7 @@ if len(sys.argv) == 2 and sys.argv[1] == "restart":
     fnm = "nohup.out"
     if os.path.isfile(fnm):
         os.remove(fnm)
+    exit(0)
 
 def check_lockfile():
     fnm = "grund.lock"

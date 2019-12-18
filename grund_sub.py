@@ -169,7 +169,7 @@ def update_job():
     ts = read_timestamp(jfn)
     rdir = os.path.join(grunt_results,grunt_jobdir)
     if not os.path.isdir(rdir):
-    os.makedirs(rdir)
+        os.makedirs(rdir)
     if ts == None: # not a timestamp -- must be files!
         fnms = read_strings_strip(jfn)
         for f in fnms:
@@ -179,7 +179,7 @@ def update_job():
             shutil.copyfile(f, rf)
             print("added results: " + rf)
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
-    else 
+    else:
         if (not os.path.isfile("grunter.py")):
             print("Error: grunter.py script not found -- MUST be present and checked into git!")
             return
