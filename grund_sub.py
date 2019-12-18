@@ -151,7 +151,7 @@ def add_job_files(jobid):
 
 # call the grunter user-script with command
 def call_grunter(grcmd):
-    print("\nCalling grunter for job: " + grunt_jobdir + " cmd: " + grcmd)
+    print("Calling grunter for job: " + grunt_jobdir + " cmd: " + grcmd)
     os.chdir(grunt_jobpath)
     if (not os.path.isfile("grunter.py")):
         print("Error: grunter.py script not found -- MUST be present and checked into git!")
@@ -165,20 +165,32 @@ def call_grunter(grcmd):
         
 def update_job():
     os.chdir(grunt_jobpath)
-    if (not os.path.isfile("grunter.py")):
-        print("Error: grunter.py script not found -- MUST be present and checked into git!")
-        return
-    p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
+    jfn = os.path.join(grunt_jobpath, grunt_jobfnm)
+    ts = read_timestamp(jfn)
     rdir = os.path.join(grunt_results,grunt_jobdir)
     if not os.path.isdir(rdir):
-        os.makedirs(rdir)
-    for f in p.splitlines():
-        if len(f) == 0:  # why is it even doing this?
-            continue
-        rf = os.path.join(rdir,f)
-        shutil.copyfile(f, rf)
-        print("added results: " + rf)
-        grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
+    os.makedirs(rdir)
+    if ts == None: # not a timestamp -- must be files!
+        fnms = read_strings_strip(jfn)
+        for f in fnms:
+            if len(f) == 0:  # why is it even doing this?
+                continue
+            rf = os.path.join(rdir,f)
+            shutil.copyfile(f, rf)
+            print("added results: " + rf)
+            grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
+    else 
+        if (not os.path.isfile("grunter.py")):
+            print("Error: grunter.py script not found -- MUST be present and checked into git!")
+            return
+        p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
+        for f in p.splitlines():
+            if len(f) == 0:  # why is it even doing this?
+                continue
+            rf = os.path.join(rdir,f)
+            shutil.copyfile(f, rf)
+            print("added results: " + rf)
+            grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     add_job_files(grunt_jobid)
 
 def delete_job():
@@ -209,6 +221,15 @@ def nuke_job():
     subprocess.run(["git", "rm", "-r", "-f", jdir])
     shutil.rmtree(jdir, ignore_errors=True, onerror=None)
 
+def newproj_server():
+    jfn = os.path.join(grunt_jobpath, grunt_jobfnm)
+    projnm = read_string(jfn)
+    if projnm == None:
+        print("Error: newproj-server: no valid project name found in: " + grunt_jobfnm)
+        return
+    print("running grunt.py newproj " + projnm)
+    subprocess.run(["python3", "grunt.py", "newproj", projnm])
+    
 def commit_jobs():
     commit = str(grunt_jobs_repo.heads.master.commit)
     with open(grunt_jobs_shafn, "w") as f:
@@ -293,6 +314,8 @@ if os.path.isfile(grunt_jobs_shafn):
             elif grunt_cmd == "delete":
                 delete_job()
                 com_results = True
+            elif grunt_cmd == "newproj-server":
+                newproj_server()
             else:
                 call_grunter(grunt_cmd)
     if com_jobs:            

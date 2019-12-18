@@ -26,7 +26,7 @@ On both client and server (cluster) you first clone the repo wherever you want:
 $ git clone https://github.com/emer/grunt.git
 ```
 
-and install `gitpython` package -- use the `--user` option on the cluster as you typically don't have sudo write ability.
+and install `gitpython` package -- use the `--user` option on the server as you typically don't have sudo write ability.
 
 ```bash
 $ pip3 install --user gitpython
@@ -56,6 +56,12 @@ or however you run python3 on server.  The `grund_sub.py` script must be in the 
 $ tail -f nohup.out
 ```
 
+There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), start with the restart arg which will clear the lock file and the nohup.out file:
+
+```bash
+$ nohup python3 grund.py restart &
+```
+
 ## SSH
 
 The system uses ssh between client and server to sync the git repositories, so you need good direct ssh access.
@@ -79,13 +85,13 @@ Then you can do `screen` locally on your client, ssh into your server, and then 
 
 Each project has its own git repositories on the server, and working copies on the client (and server), that contain all the files for a given project.  These repositories are (wc = working copy):
 
-* `~/grunt/wc/cluster/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side (cluster).
+* `~/grunt/wc/server/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side.
 
-* `~/grunt/wc/cluster/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
+* `~/grunt/wc/server/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
 
-The `cluster` is the name of the cluster, which is prompted when you create your first project, and then stored in `~/.grunt.defcluster` -- if you have a `grunt.cluster` file in the current directory it will override that.
+The `server` is the name of the server, which is prompted when you create your first project, and then stored in `~/.grunt.defserver` -- if you have a `grunt.server` file in the current directory, the contents of that will override that.
 
-The `projname` is the directory name where you execute the `grunt.py submit` job -- i.e., the directory for your simulation.
+The `projname` is the directory name where you execute the `grunt.py submit` job -- i.e., the directory for your simulation -- if you have a `grunt.projname` file in the current directory, the contents of that will override that.
 
 The server has the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
 
@@ -102,6 +108,12 @@ $ grunt newproj projname username@server.at.university.edu
 ```
 
 where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
+
+After you've created your first project, you can trigger remote project creation in an existing project using:
+
+```bash
+$ grunt newproj-server projname
+```
 
 # Usage
 
@@ -156,8 +168,12 @@ newproj	 <projname> [remote-url] creates new project repositories -- for use on 
 
 All job relevant output files are named `job.` and generically all `job.*` files are committed back to jobs.  Here are some standard job file names, for standard slurm-based `grunter.py` workflow.
 
-* `grunter.py` `submit` command:
+* `grunt.py` `submit` command:
+    + `job.message` -- the message passed in mandatory `-m 'message'`
     + `job.submit` -- timestamp when job was submitted
+    + `job.args` -- extra args (one per line) excluding final `-m 'message'` args -- the sample `grunter.py` script uses the contents of this file to pass args to the actual job.
+
+* `grunter.py` `submit` command:
     + `job.sbatch` -- slurm sbatch file for running job
     + `job.slurmid` -- slurm job id number
     + `job.start` -- timestamp when job actually starts (by `job.sbatch`)
@@ -165,10 +181,15 @@ All job relevant output files are named `job.` and generically all `job.*` files
 
 * `job.canceled` -- timestamp when job canceled by `grunter.py` `cancel` command
 
-* `job.args` -- written by `grunt.py` with any extra args (one per line) during `submit` -- the `grunter.py` script uses the contents of this file to pass args to the actual job.
-    
+# Best Practices
+
+Here are some tips for effective use of this tool:
+
+* As in `git`, **it is essential to always use good -m messages** for each job `submit` -- a critical benefit of this tool is providing a record of each simulation run, and your goals and mental state at the point of submission are the best clues as to what this job was about, when you come back to it in a few days or weeks and have forgotten everything..
+
+* Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archive`d.
+
 # TODO
-    
-* support `rmtnewproj` command in `grunt` to submit command to run newproj on server
-* support ranges of jobs, e.g., ore00002...20
+
+* add a `diff` command that does diffs between two job runs per file -- very handy
 

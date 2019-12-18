@@ -8,10 +8,35 @@
 
 import getpass
 import os
+import sys
 import time
 import subprocess
 from pathlib import Path
 
+if len(sys.argv) == 2 and sys.argv[1] == "restart":
+    fnm = "grund.lock"
+    if os.path.isfile(fnm):
+        os.remove(fnm)
+    fnm = "nohup.out"
+    if os.path.isfile(fnm):
+        os.remove(fnm)
+
+def check_lockfile():
+    fnm = "grund.lock"
+    if os.path.isfile(fnm):
+        pid = ""
+        with open(fnm, "r") as f:
+            pid = str(f.readline()).rstrip()
+        print("ERROR: grund.lock says grund is already running at pid: " + pid + " -- run with restart if stale!")
+        exit(1)
+        return True
+    else:
+        with open(fnm,"w") as f:
+            f.write(str(os.getpid()) + "\n")
+        return False
+
+check_lockfile()
+        
 def open_servername(fnm):
     global grunt_clust
     if os.path.isfile(fnm):
@@ -46,7 +71,7 @@ print("grunt_user: " + grunt_user)
     
 # grunt_wc is the working directory path
 grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
-print("grunt_wc: " + grunt_wc)
+print("grund is starting to monitor jobs in grunt_wc: " + grunt_wc)
 
 while True:
     for f in os.listdir(grunt_wc):

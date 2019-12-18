@@ -18,26 +18,42 @@ from datetime import datetime, timezone
 import csv
 
 def open_servername(fnm):
-    global grunt_clust
+    global grunt_server
     if os.path.isfile(fnm):
         with open(fnm, "r") as f:
-            grunt_clust = str(f.readline()).rstrip()
-        print("server is: " + grunt_clust + " from: " + fnm)
+            grunt_server = str(f.readline()).rstrip()
+        # print("server is: " + grunt_server + " from: " + fnm)
         return True
     else:
         return False
 
 def get_server():
     cf = "grunt.server"
-    if not open_servername(cf):
+    if open_servername(cf):
+        print("using specific server: " + grunt_server + " from: " + fnm)
+    else:
         df = os.path.join(str(Path.home()), ".grunt.defserver")
         if not open_servername(df):
             cnm = str(input("enter name of default server to use: "))
             with open(df, "w") as f:
                 f.write(cnm + "\n")
             
-# grunt_clust is server name -- default is in ~.grunt.defserver
-grunt_clust = ""
+def open_projname(fnm):
+    global grunt_proj
+    if os.path.isfile(fnm):
+        with open(fnm, "r") as f:
+            grunt_proj = str(f.readline()).rstrip()
+        return True
+    else:
+        return False
+
+def get_projname():
+    cf = "grunt.projname"
+    if open_projname(cf):
+        print("using alt projname: " + grunt_proj + " from: " + cf)
+            
+# grunt_server is server name -- default is in ~.grunt.defserver
+grunt_server = ""
 get_server()
 
 # grunt_root is ~/grunt
@@ -58,13 +74,17 @@ grunt_cwd = os.path.split(os.getcwd())
 
 # grunt_proj is current project name = subir name of cwd
 grunt_proj = grunt_cwd[-1]
+get_projname()  # allow override with grunt.projname file
 
 # grunt_wc is the working copy root
-grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user, grunt_proj)
+grunt_wc = os.path.join(grunt_root, "wc", grunt_server, grunt_user, grunt_proj)
 
 # grunt_jobs is the jobs git working dir for project
 grunt_jobs = os.path.join(grunt_wc, "jobs")
 # print("grunt_jobs: " + grunt_jobs)
+
+# grunt_active is the jobs/active dir
+grunt_active = os.path.join(grunt_jobs, "active")
 
 # grunt_jobs_repo is initialized in pull_jobs_repo() and is active git repo handle
 grunt_jobs_repo = 0
@@ -86,12 +106,12 @@ grunt_jobnum = 0
 jobs_pending = []
 jobs_running = []
 jobs_done = []
-jobs_header =     ["JobId", "SlurmId", "Status", "SlurmStat", "Submit", "Start", "End", "Args"]
-jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
+jobs_header =     ["JobId", "SlurmId", "Status", "SlurmStat", "Submit", "Start", "End", "Args", "Message"]
+jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
 
 def new_jobid():
     global grunt_jobnum, grunt_jobid
-    jf = os.path.join(grunt_jobs, "active", "nextjob.id")
+    jf = os.path.join(grunt_active, "nextjob.id")
     if os.path.isfile(jf):
         with open(jf, "r+") as f:
             grunt_jobnum = int(f.readline())
@@ -152,14 +172,14 @@ def copy_to_jobs(new_job):
         grunt_jobs_repo.git.add(jf)
 
 def print_job_out(jobid):
-    job_out = os.path.join(grunt_jobs, "active", jobid, grunt_proj, "job.out")
+    job_out = os.path.join(grunt_active, jobid, grunt_proj, "job.out")
     print("\njob.out: " + job_out + "\n")
     out = read_strings(job_out)
     print("".join(out))
         
 def done_job_needs_update(jobid):
     # if job.end is later than grcmd.update (or it doesn't even exist), then needs update
-    jobdir = os.path.join(grunt_jobs, "active", jobid, grunt_proj)
+    jobdir = os.path.join(grunt_active, jobid, grunt_proj)
     updtcmd = os.path.join(jobdir, "grcmd.update")
     if not os.path.isfile(updtcmd):
         return True
@@ -195,7 +215,7 @@ def unlink_results(jobid):
         print("\nunlinked: " + dst + "\n")
         
 def write_cmd(jobid, cmd, cmdstr):
-    job_dir = os.path.join(grunt_jobs, "active", jobid, grunt_proj)
+    job_dir = os.path.join(grunt_active, jobid, grunt_proj)
     cmdfn = os.path.join(job_dir, "grcmd." + cmd)
     with open(cmdfn,"w") as f:
         f.write(cmdstr + "\n")
@@ -285,44 +305,45 @@ def read_timestamp_to_local(fnm):
         return dstr
     return timestamp_local(dt)
     
-# argslist returns post-command args as newline separated string 
-# for use in command files
 def argslist():
+    # argslist returns post-command args as newline separated string 
+    # for use in command files
     return "\n".join(sys.argv[3:])
 
 def jobid_fm_jobs_list(lst):
     return lst[0]
     
-# active_jobs_list generates lists of active jobs with statuses    
 def active_jobs_list():
+    # active_jobs_list generates lists of active jobs with statuses    
     global jobs_pending, jobs_running, jobs_done
-    act = os.path.join(grunt_jobs, "active")
-    for jobid in os.listdir(act):
+    for jobid in os.listdir(grunt_active):
         if not jobid.startswith(grunt_userid):
             continue
-        jdir = os.path.join(act, jobid, grunt_proj)
+        jdir = os.path.join(grunt_active, jobid, grunt_proj)
         jsub = os.path.join(jdir, "job.submit")
         jst = os.path.join(jdir, "job.start")
         jed = os.path.join(jdir, "job.end")
         jcan = os.path.join(jdir, "job.canceled")
         jstat= os.path.join(jdir, "job.status")
-        slid = os.path.join(jdir, "job.slurmid")
+        jslid = os.path.join(jdir, "job.slurmid")
+        jmsg = os.path.join(jdir, "job.message")
         args = " ".join(read_strings_strip(os.path.join(jdir, "job.args")))
-        slurmid = read_string(slid)
+        slurmid = read_string(jslid)
         slurmstat = read_string(jstat)
+        msg = read_string(jmsg)
         sub = read_timestamp_to_local(jsub)
         st = read_timestamp_to_local(jst)
         ed = read_timestamp_to_local(jed)
         if os.path.isfile(jcan):
             ed = read_timestamp_to_local(jcan)
-            jobs_done.append([jobid, slurmid, "Canceled", slurmstat, sub, st, ed, args])
-        elif os.path.isfile(jst) and os.path.isfile(slid):
+            jobs_done.append([jobid, slurmid, "Canceled", slurmstat, sub, st, ed, args, msg])
+        elif os.path.isfile(jst) and os.path.isfile(jslid):
             if os.path.isfile(jed):
-                jobs_done.append([jobid, slurmid, "Done", slurmstat, sub, st, ed, args])
+                jobs_done.append([jobid, slurmid, "Done", slurmstat, sub, st, ed, args, msg])
             else:
-                jobs_running.append([jobid, slurmid, "Running", slurmstat, sub, st, "", args])
+                jobs_running.append([jobid, slurmid, "Running", slurmstat, sub, st, "", args, msg])
         else:
-            jobs_pending.append([jobid, "", "Pending", slurmstat, sub, st, ed, args])
+            jobs_pending.append([jobid, "", "Pending", slurmstat, sub, st, ed, args, msg])
     jobs_pending.sort(key=jobid_fm_jobs_list)
     jobs_running.sort(key=jobid_fm_jobs_list)
     jobs_done.sort(key=jobid_fm_jobs_list)
@@ -330,7 +351,6 @@ def active_jobs_list():
     write_csv("jobs.running", jobs_header, jobs_running) 
     write_csv("jobs.done", jobs_header, jobs_done) 
 
-# active_jobs_list generates lists of active jobs with statuses    
 def print_jobs(jobs_list, desc):
     print("\n################################\n#  " + desc)
     jl = jobs_list.copy()
@@ -342,6 +362,49 @@ def print_jobs(jobs_list, desc):
     table = [fmt.format(*row) for row in s]
     print('\n'.join(table))
     print()
+
+def glob_job_args(jl, jdir):
+    # this gets a list of jobids that expands ranges of the form job000001..300
+    njl = jl.copy()
+    for i in range(len(jl)):
+        j = njl[i]
+        ddi = j.index("..") if ".." in j else None
+        if ddi == None:
+            continue
+        sts = j[:ddi]
+        eds = j[ddi+2:]
+        if eds[0] == ".": # allow for ... as go people might do that..
+            eds = eds[1:]
+        st = int(sts[3:])
+        ed = int(eds)
+        first = True
+        for jn in range(st, ed+1):
+            jns = sts[:len(sts)-len(eds)] + str(jn).zfill(len(eds))
+            jp = os.path.join(jdir, jns)
+            if not os.path.isdir(jp):
+                continue
+            if first:
+                njl[i] = jns
+                first = False
+            else:
+                njl.append(jns)
+
+    return njl
+
+def jobids(jdir):
+    # returns the list of jobid's in given directory
+    fls = os.listdir(jdir)
+    jids = []
+    for f in fls:
+        fp = os.path.join(jdir, f)
+        if not os.path.isdir(fp):
+            continue
+        if f[:3] != grunt_userid:
+            continue
+        jids.append(f)
+    jids.sort()
+    return jids
+
     
 #########################################
 # repo mgmt
@@ -374,12 +437,12 @@ def init_repos(projnm, remote):
     # creates repositories for given project name
     # remote is remote origin username -- must create on server first
     # before creating locally!
-    wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user, projnm)
+    wc = os.path.join(grunt_root, "wc", grunt_server, grunt_user, projnm)
     
     if os.path.isdir(wc):
         return
 
-    bb = os.path.join(grunt_root, "bb", grunt_clust, grunt_user, projnm)
+    bb = os.path.join(grunt_root, "bb", grunt_server, grunt_user, projnm)
     bb_jobs = os.path.join(bb, "jobs")
     wc_jobs = os.path.join(wc, "jobs")
     bb_res = os.path.join(bb, "results")
@@ -407,7 +470,7 @@ def init_repos(projnm, remote):
         res_wc_repo.remotes.origin.push()
     else:
         user = remote.split("@")[0]
-        remote_url = remote + ":grunt/bb/" + grunt_clust + "/" + user + "/" + projnm
+        remote_url = remote + ":grunt/bb/" + grunt_server + "/" + user + "/" + projnm
         jobs_wc_repo = Repo.init(wc_jobs)
         res_wc_repo = Repo.init(wc_res)
         set_remote(jobs_wc_repo, remote_url + "/jobs")
@@ -418,61 +481,85 @@ def init_repos(projnm, remote):
 
 if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\ngrunt.py is the git-based run tool client script\n")
-    print("usage: pass commands with args as follows:\n")
-    print("submit\t [args] submits git controlled files in current dir to jobs working dir:")
+    print("usage: pass commands with args as follows:")
+    print("\t <jobid..> can include space-separated list and job000011..22 range expressions\n")
+
+    print("submit\t [args] -m 'message' submits git controlled files in current dir to jobs working dir:")
     print("\t ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
-    print("\t which grunter.py script uses for passing args to job -- use --notes='notes' for descriptive info.")
+    print("\t which grunter.py script uses for passing args to job -- must pass message as last arg!")
     print("\t git commit triggers update of server git repo, and grund daemon then submits the new job.")
     print("\t you *must* have grunter.py script in the project dir to manage actual submission!")
-    print("\t see example in grunt github source repository.\n")
+    print("\t see example in https://github.com/emer/grunt repository.\n")
+
     print("jobs\t [active|done] shows lists of all jobs, or specific subset (active = running, pending)\n")
+
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
-    print("out\t <jobid> displays the job.out job output for given job\n")
-    print("update\t [jobid] [files...] checkin current job results to results git repository")
-    print("\t with no files listed uses gruntres.py script to generate list, else uses files")
-    print("\t with no jobid it does generic update on all running jobs")
-    print("\t automatically does link on jobs to make easy to access from orig source\n")
+
+    print("out\t <jobid..> displays the job.out job output for given job\n")
+
+    print("update\t [jobid] [files..] push current job results to results git repository")
+    print("\t with no files listed uses grunter.py results command on server for list.")
+    print("\t with no jobid it does generic update on all running jobs.")
+    print("\t automatically does link on jobs to make easy to access from orig source.\n")
+
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
-    print("link\t <jobid...> make symbolic links into local gresults/jobid for job results")
+
+    print("link\t <jobid..> make symbolic links into local gresults/jobid for job results")
     print("\t this makes it easier to access the results -- this happens automatically at update\n")
-    print("nuke\t <jobid...> deletes given job directory (jobs and results) -- use carefully!")
+
+    print("nuke\t <jobid..> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
-    print("delete\t <jobid...> moves job directory from active to delete subdir, deletes results")
+
+    print("delete\t <jobid..> moves job directory from active to delete subdir, deletes results")
     print("\t useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case\n")
-    print("archive\t <jobid...> moves job directory from active to archive subdir")
+
+    print("archive\t <jobid..> moves job directory from active to archive subdir")
     print("\t useful for removing clutter from active, and preserving important but non-current results\n")
+
     print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
     print("\t and client -- on client you should specify the remote-url arg which should be:")
     print("\t just your username and server name on server: username@server.my.university.edu\n")
+
+    print("newproj-server\t <projname> calls: newproj projname on server -- use in existing proj")
+    print("\t to create a new project\n")
     exit(0)
 
 cmd = sys.argv[1]    
 
 # always pull except when making new proj    
-if cmd != "newproj":
+if cmd != "newproj" and cmd != "newproj-server":
     pull_jobs_repo()
     active_jobs_list()
 
 if (cmd == "submit"):
+    narg = len(sys.argv)
+    if narg < 4:
+        print("Error: must at least pass -m 'message' args to submit -- very important to document each job!")
+        exit(1)
+    if sys.argv[narg-2] != "-m":
+        print("Error: the -m 'message' args must be at end of args list -- very important to document each job!")
+        exit(1)
+    message = sys.argv[narg-1]
     if (not os.path.isfile("grunter.py")):
-        print("Error: grunter.py grunt extensible runner script needed to submit on server -- configure as neede!")
+        print("Error: grunter.py grunt extensible runner script needed to submit on server -- configure as needed!")
         exit(1)
     new_jobid()
-    new_job = os.path.join(grunt_jobs, "active", grunt_jobid, grunt_proj) # add proj subdir so build works
+    new_job = os.path.join(grunt_active, grunt_jobid, grunt_proj) # add proj subdir so build works
     copy_to_jobs(new_job)
     os.chdir(new_job)
     write_string("job.submit", timestamp())
     grunt_jobs_repo.git.add(os.path.join(new_job,'job.submit'))
-    if len(sys.argv) > 2:
-        with open("job.args","w") as f:
-            for arg in sys.argv[2:]:
-                f.write(arg + "\n")
+    write_string("job.message", message)
+    grunt_jobs_repo.git.add(os.path.join(new_job,'job.message'))
+    with open("job.args","w") as f:
+        for i in range(2, narg-2):
+            arg = sys.args[i]
+            f.write(arg + "\n")
         grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
     write_cmd(grunt_jobid, cmd, timestamp())
     grunt_jobs_repo.index.commit("Submit job: " + grunt_jobid)
     grunt_jobs_repo.remotes.origin.push()
-    exit(0)
 elif (cmd == "jobs"):
     if len(sys.argv) < 3:
         print_jobs(jobs_done, "Done Jobs")
@@ -484,7 +571,6 @@ elif (cmd == "jobs"):
         else:
             print_jobs(jobs_pending, "Pending Jobs")
             print_jobs(jobs_running, "Running Jobs")
-    exit(0)
 elif (cmd == "status"):
     # special support to use active jobs
     if len(sys.argv) == 2:
@@ -496,29 +582,29 @@ elif (cmd == "status"):
             write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)
     else:           
-        for jb in sys.argv[2:]:
+        job_args = glob_job_args(sys.argv[2:], grunt_active)
+        for jb in jobs_args:
             grunt_jobid = jb
             write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)
-    exit(0)
 elif (cmd == "out"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
-    for jb in sys.argv[2:]:
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
         grunt_jobid = jb
         print_job_out(grunt_jobid)
-    exit(0)
 elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
-    for jb in sys.argv[2:]:
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
         grunt_jobid = jb
         write_cmd(grunt_jobid, cmd, timestamp())
         unlink_results(grunt_jobid) # remove from local results
     commit_cmd(cmd)
-    exit(0)
 elif (cmd == "pull"):
     print("pulling current results from: " + grunt_results)
     pull_results_repo()
@@ -527,10 +613,18 @@ elif (cmd == "link"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
-    for jb in sys.argv[2:]:
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
         grunt_jobid = jb
         link_results(grunt_jobid)
-    exit(0)
+elif (cmd == "unlink"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
+        grunt_jobid = jb
+        unlink_results(grunt_jobid)
 elif (cmd == "update"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
@@ -558,7 +652,6 @@ elif (cmd == "update"):
         grunt_jobid = sys.argv[2]
         write_commit_cmd(grunt_jobid, "update", argslist())
         link_results(grunt_jobid)
-    exit(0)
 elif (cmd == "newproj"):
     if len(sys.argv) < 3:
         print("newproj command requires name of project")
@@ -568,13 +661,20 @@ elif (cmd == "newproj"):
     if len(sys.argv) == 4:
         remote = sys.argv[3]
     init_repos(projnm, remote)
-    exit(0)
+elif (cmd == "newproj-server"):
+    if len(sys.argv) < 3:
+        print("newproj command requires name of project")
+        exit(1)
+    grunt_jobid = jobids(grunt_active)[-1] # get last job
+    projnm = sys.argv[2]
+    write_commit_cmd(grunt_jobid, "", projnm)
 else:
     # generic command -- just pass onto server
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
-    for jb in sys.argv[2:]:
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
         grunt_jobid = jb
         write_cmd(grunt_jobid, cmd, timestamp())
     commit_cmd(cmd)
