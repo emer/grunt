@@ -121,44 +121,50 @@ type `grunt help` to see docs for all the commands:
 
 ```
 usage: pass commands with args as follows:
+	 <jobid..> can include space-separated list and job000011..22 range expressions
+	 end number is *inclusive*!
 
-submit	 [args] submits git controlled files in current dir to jobs working dir:
+submit	 [args] -m 'message' submits git controlled files in current dir to jobs working dir:
 	 ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
-	 which you can refer to later for notes about the job or use in your scripts.
+	 which grunter.py script uses for passing args to job -- must pass message as last arg!
 	 git commit triggers update of server git repo, and grund daemon then submits the new job.
-	 you *must* have a gruntsub.py script in the project dir that will create a grunt.sh that the
-	 server will run to run the job under slurm (i.e., with #SBATCH lines) -- see example in
-	 grunt github source repository.
+	 you *must* have grunter.py script in the project dir to manage actual submission!
+	 see example in https://github.com/emer/grunt repository.
 
 jobs	 [active|done] shows lists of all jobs, or specific subset (active = running, pending)
 
 status	 [jobid] pings the server to check status and update job status files
 	 on all running and pending jobs if no job specified
 
-out	 <jobid> displays the job.out job output for given job
+out	 <jobid..> displays the job.out output for given job(s)
 
-update	 [jobid] [files...] checkin current job results to results git repository
-	 with no files listed uses gruntres.py script to generate list, else uses files
-	 with no jobid it does generic update on all running jobs
-	 automatically does link on jobs to make easy to access from orig source
+ls	 <jobid..> displays the job.list file list for given job(s)
+
+update	 [jobid] [files..] push current job results to results git repository
+	 with no files listed uses grunter.py results command on server for list.
+	 with no jobid it does generic update on all running jobs.
+	 automatically does link on jobs to make easy to access from orig source.
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
 
-link	 <jobid...> make symbolic links into local cresults/jobid for job results
+link	 <jobid..> make symbolic links into local gresults/jobid for job results
 	 this makes it easier to access the results -- this happens automatically at update
 
-nuke	 <jobid...> deletes given job directory (jobs and results) -- use carefully!
+nuke	 <jobid..> deletes given job directory (jobs and results) -- use carefully!
 	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
 
-delete	 <jobid...> moves job directory from active to delete subdir
+delete	 <jobid..> moves job directory from active to delete subdir, deletes results
 	 useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
 
-archive	 <jobid...> moves job directory from active to archive subdir
+archive	 <jobid..> moves job directory from active to archive subdir
 	 useful for removing clutter from active, and preserving important but non-current results
 
 newproj	 <projname> [remote-url] creates new project repositories -- for use on both server
 	 and client -- on client you should specify the remote-url arg which should be:
 	 just your username and server name on server: username@server.my.university.edu
+
+newproj-server	 <projname> calls: newproj projname on server -- use in existing proj
+	 to create a new project
 
 ```
 

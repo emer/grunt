@@ -181,7 +181,8 @@ def print_job_list(jobid):
     job_ls = os.path.join(grunt_active, jobid, grunt_proj, "job.list")
     fl = read_csv(job_ls, True)
     for row in fl:
-        row[1] = "{:,}".format(row[1])
+        row[1] = "{:,}".format(int(row[1])).rjust(16)
+        row[2] = timestamp_local(parse_timestamp(row[2]))
     fl.insert(0, file_list_header)
     fl.insert(1, file_list_sep)
     s = [[str(e) for e in row] for row in fl]
@@ -434,7 +435,7 @@ def jobids(jdir):
     return jids
 
 file_list_header = ["File", "Size", "Modified"]
-file_list_sep = ["===============", "===========", "============="]
+file_list_sep = ["===============", "================", "======================="]
     
 def list_files(ldir):
     # returns a list of files in directory with fields as in file_list_header
@@ -528,7 +529,8 @@ def init_repos(projnm, remote):
 if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\ngrunt.py is the git-based run tool client script\n")
     print("usage: pass commands with args as follows:")
-    print("\t <jobid..> can include space-separated list and job000011..22 range expressions\n")
+    print("\t <jobid..> can include space-separated list and job000011..22 range expressions")
+    print("\t end number is *inclusive*!\n")
 
     print("submit\t [args] -m 'message' submits git controlled files in current dir to jobs working dir:")
     print("\t ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args")
@@ -542,9 +544,9 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
 
-    print("out\t <jobid..> displays the job.out job output for given job(s)\n")
+    print("out\t <jobid..> displays the job.out output for given job(s)\n")
 
-    print("ls\t <jobid..> displays the job.list job file list given job\n")
+    print("ls\t <jobid..> displays the job.list file list for given job(s)\n")
 
     print("update\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")
@@ -701,9 +703,11 @@ elif (cmd == "update"):
                 link_results(grunt_jobid)
         commit_cmd(cmd)
     elif len(sys.argv) == 3:
-        grunt_jobid = sys.argv[2]
-        write_commit_cmd(grunt_jobid, "update", timestamp())
-        link_results(grunt_jobid)
+        job_args = glob_job_args(sys.argv[2:], grunt_active)
+        for jb in job_args:
+            grunt_jobid = jb
+            write_commit_cmd(grunt_jobid, "update", timestamp())
+            link_results(grunt_jobid)
     else: # jobs, files
         grunt_jobid = sys.argv[2]
         write_commit_cmd(grunt_jobid, "update", argslist())
