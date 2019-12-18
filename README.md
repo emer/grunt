@@ -179,6 +179,8 @@ All job relevant output files are named `job.` and generically all `job.*` files
     + `job.start` -- timestamp when job actually starts (by `job.sbatch`)
     + `job.end` -- timestamp when job completes (also `job.sbatch`)
 
+* `job.list` -- csv list of files in dir -- updated by any command touching a given job (e.g., `status` or `update`) -- you can look at this with `grunt ls` to see what other files you might want to grab with `update`
+
 * `job.canceled` -- timestamp when job canceled by `grunter.py` `cancel` command
 
 # Best Practices
@@ -192,4 +194,6 @@ Here are some tips for effective use of this tool:
 # TODO
 
 * add a `diff` command that does diffs between two job runs per file -- very handy
+
+* it might get kinda slow checking a bunch of different project repos on grund, esp with a slow filesystem.
 

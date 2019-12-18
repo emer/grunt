@@ -10,6 +10,7 @@ from subprocess import Popen, PIPE
 import shutil
 import glob
 from datetime import datetime, timezone
+import csv
 
 # turn this on to see more verbose debug messages
 grunt_debug = False
@@ -71,6 +72,12 @@ def get_command(job_file):
     grunt_jobpath = os.path.join(grunt_jobs, grunt_jobdir)
     grunt_jobid = os.path.split(grunt_jobdir)[1]
     return True
+
+def write_csv(fnm, header, data):
+    with open(fnm, 'w') as csvfile: 
+        csvwriter = csv.writer(csvfile) 
+        csvwriter.writerow(header) 
+        csvwriter.writerows(data)
 
 def write_string(fnm, stval):
     with open(fnm,"w") as f:
@@ -141,9 +148,29 @@ def read_timestamp_to_local(fnm):
         return dstr
     return timestamp_local(dt)
     
+file_list_header = ["File", "Size", "Modified"]
+    
+def list_files(ldir):
+    # returns a list of files in directory with fields as in file_list_header
+    fls = os.listdir(ldir)
+    flist = []
+    for f in fls:
+        fp = os.path.join(ldir, f)
+        if not os.path.isfile(fp):
+            continue
+        if f[0] == '.':
+            continue
+        mtime = timestamp_fmt(datetime.fromtimestamp(os.path.getmtime(fp), timezone.utc))
+        sz = os.path.getsize(fp)
+        flist.append([f, mtime, sz])
+    flist.sort()
+    return flist
+
 # add job files adds all files named job.* in current dir
 def add_job_files(jobid):
     os.chdir(grunt_jobpath)
+    flist = list_files("./")
+    write_csv("job.list", file_list_header, flist)
     jobfiles = "\n".join(glob.glob("job.*"))
     grunt_jobs_repo.remotes.origin.push()
     for f in jobfiles.splitlines():

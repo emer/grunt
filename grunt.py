@@ -177,6 +177,18 @@ def print_job_out(jobid):
     out = read_strings(job_out)
     print("".join(out))
         
+def print_job_list(jobid):
+    job_ls = os.path.join(grunt_active, jobid, grunt_proj, "job.list")
+    fl = read_csv(job_ls, True)
+    fl.insert(0, file_list_header)
+    fl.insert(1, flie_list_sep)
+    s = [[str(e) for e in row] for row in fl]
+    lens = [max(1,max(map(len, col))) for col in zip(*s)]
+    fmt = '\t'.join('{{:{}s}}'.format(x) for x in lens)
+    table = [fmt.format(*row) for row in s]
+    print('\n'.join(table))
+    print()
+        
 def done_job_needs_update(jobid):
     # if job.end is later than grcmd.update (or it doesn't even exist), then needs update
     jobdir = os.path.join(grunt_active, jobid, grunt_proj)
@@ -236,6 +248,20 @@ def write_csv(fnm, header, data):
         csvwriter.writerow(header) 
         csvwriter.writerows(data)
 
+def read_csv(fnm, header):
+    # reads list data from file -- if header is True then discards first row as header
+    data = []
+    with open(fnm) as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=',')
+        lc = 0
+        for row in csvreader:
+            if header and lc == 0:
+                lc += 1
+            else:
+                data.append(row)
+                lc += 1
+    return data
+    
 def write_string(fnm, stval):
     with open(fnm,"w") as f:
         f.write(stval + "\n")
@@ -405,6 +431,24 @@ def jobids(jdir):
     jids.sort()
     return jids
 
+file_list_header = ["File", "Size", "Modified"]
+file_list_sep = ["===============", "===========", "============="]
+    
+def list_files(ldir):
+    # returns a list of files in directory with fields as in file_list_header
+    fls = os.listdir(ldir)
+    flist = []
+    for f in fls:
+        fp = os.path.join(ldir, f)
+        if not os.path.isfile(fp):
+            continue
+        if f[0] == '.':
+            continue
+        mtime = timestamp_fmt(datetime.fromtimestamp(os.path.getmtime(fp), timezone.utc))
+        sz = os.path.getsize(fp)
+        flist.append([f, mtime, sz])
+    flist.sort()
+    return flist
     
 #########################################
 # repo mgmt
@@ -496,7 +540,9 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
 
-    print("out\t <jobid..> displays the job.out job output for given job\n")
+    print("out\t <jobid..> displays the job.out job output for given job(s)\n")
+
+    print("ls\t <jobid..> displays the job.list job file list given job\n")
 
     print("update\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")
@@ -528,7 +574,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
 cmd = sys.argv[1]    
 
 # always pull except when making new proj    
-if cmd != "newproj" and cmd != "newproj-server":
+if cmd != "newproj":
     pull_jobs_repo()
     active_jobs_list()
 
@@ -595,6 +641,14 @@ elif (cmd == "out"):
     for jb in job_args:
         grunt_jobid = jb
         print_job_out(grunt_jobid)
+elif (cmd == "ls" or cmd == "list"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    job_args = glob_job_args(sys.argv[2:], grunt_active)
+    for jb in job_args:
+        grunt_jobid = jb
+        print_job_list(grunt_jobid)
 elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
@@ -667,7 +721,8 @@ elif (cmd == "newproj-server"):
         exit(1)
     grunt_jobid = jobids(grunt_active)[-1] # get last job
     projnm = sys.argv[2]
-    write_commit_cmd(grunt_jobid, "", projnm)
+    print("using jobid: " + grunt_jobid + " to create project: " + projnm + " on server")
+    write_commit_cmd(grunt_jobid, cmd, projnm)
 else:
     # generic command -- just pass onto server
     if len(sys.argv) < 3:
@@ -678,6 +733,5 @@ else:
         grunt_jobid = jb
         write_cmd(grunt_jobid, cmd, timestamp())
     commit_cmd(cmd)
-    exit(0)
     
 
