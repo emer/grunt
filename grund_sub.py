@@ -158,7 +158,7 @@ def list_files(ldir):
         fp = os.path.join(ldir, f)
         if not os.path.isfile(fp):
             continue
-        if f[0] == '.':
+        if f[0] == '.' or f.startswith("job.") or f.startswith("grcmd.") or f == "grunter.py":
             continue
         mtime = timestamp_fmt(datetime.fromtimestamp(os.path.getmtime(fp), timezone.utc))
         sz = os.path.getsize(fp)

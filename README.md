@@ -185,7 +185,7 @@ All job relevant output files are named `job.` and generically all `job.*` files
     + `job.start` -- timestamp when job actually starts (by `job.sbatch`)
     + `job.end` -- timestamp when job completes (also `job.sbatch`)
 
-* `job.list` -- csv list of files in dir -- updated by any command touching a given job (e.g., `status` or `update`) -- you can look at this with `grunt ls` to see what other files you might want to grab with `update`
+* `job.list` -- csv list of files in dir (excluding all `job.*`,  `grcmd.*` files) updated by any command touching a given job (e.g., `status` or `update`) -- you can look at this with `grunt ls` to see what other files you might want to grab with `update`
 
 * `job.canceled` -- timestamp when job canceled by `grunter.py` `cancel` command
 
