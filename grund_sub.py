@@ -314,7 +314,7 @@ if os.path.isfile(grunt_jobs_shafn):
     com_jobs = False
     com_results = False
     if grunt_debug:
-        print("Begin processing commits from hash: " + last_processed_commit_hash)
+        print("Begin processing commits from hash: " + last_processed_commit_hash, flush=True)
     last_to_head = last_processed_commit_hash + "..HEAD"
     most_recent_head = None
     for cm in grunt_jobs_repo.iter_commits(rev=last_to_head):
@@ -323,11 +323,11 @@ if os.path.isfile(grunt_jobs_shafn):
         if cm.message.startswith("GRUND:"): # skip our own -- key
             continue
         if grunt_debug:
-            print("Processing commit " + str(cm))
+            print("Processing commit " + str(cm), flush=True)
         for f in cm.stats.files:
             if not get_command(f):
                 continue
-            print("grund command: " + grunt_cmd + " in: " + grunt_jobdir + " at: " + timestamp())
+            print("\ngrund command: " + grunt_cmd + " in: " + grunt_jobdir + " at: " + timestamp(), flush=True)
             com_jobs = True
             if grunt_cmd == "update":
                 update_job()
