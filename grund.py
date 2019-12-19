@@ -43,7 +43,7 @@ def open_servername(fnm):
     if os.path.isfile(fnm):
         with open(fnm, "r") as f:
             grunt_clust = str(f.readline()).rstrip()
-        print("server is: " + grunt_clust + " from: " + fnm)
+        print("server is: " + grunt_clust + " from: " + fnm, flush=True)
         return True
     else:
         return False
@@ -68,11 +68,11 @@ print ("grunt_root: " + grunt_root)
 
 # grunt_user is user name
 grunt_user = getpass.getuser()
-print("grunt_user: " + grunt_user)
+print("grunt_user: " + grunt_user, flush=True)
     
 # grunt_wc is the working directory path
 grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
-print("grund is starting to monitor jobs in grunt_wc: " + grunt_wc)
+print("grund is starting to monitor jobs in grunt_wc: " + grunt_wc, flush=True)
 
 while True:
     for f in os.listdir(grunt_wc):

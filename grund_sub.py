@@ -178,15 +178,15 @@ def add_job_files(jobid):
 
 # call the grunter user-script with command
 def call_grunter(grcmd):
-    print("Calling grunter for job: " + grunt_jobdir + " cmd: " + grcmd)
+    print("Calling grunter for job: " + grunt_jobdir + " cmd: " + grcmd, flush=True)
     os.chdir(grunt_jobpath)
     if (not os.path.isfile("grunter.py")):
-        print("Error: grunter.py script not found -- MUST be present and checked into git!")
+        print("Error: grunter.py script not found -- MUST be present and checked into git!", flush=True)
         return
     try:
         subprocess.run(["python3","grunter.py", grcmd])
     except subprocess.CalledProcessError:
-        print("Failed to run grunter.py script")
+        print("Failed to run grunter.py script", flush=True)
         return
     add_job_files(grunt_jobid)
         
@@ -204,11 +204,11 @@ def update_job():
                 continue
             rf = os.path.join(rdir,f)
             shutil.copyfile(f, rf)
-            print("added results: " + rf)
+            print("added results: " + rf, flush=True)
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     else:
         if (not os.path.isfile("grunter.py")):
-            print("Error: grunter.py script not found -- MUST be present and checked into git!")
+            print("Error: grunter.py script not found -- MUST be present and checked into git!", flush=True)
             return
         p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
         for f in p.splitlines():
@@ -216,7 +216,7 @@ def update_job():
                 continue
             rf = os.path.join(rdir,f)
             shutil.copyfile(f, rf)
-            print("added results: " + rf)
+            print("added results: " + rf, flush=True)
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     add_job_files(grunt_jobid)
 
@@ -252,9 +252,9 @@ def newproj_server():
     jfn = os.path.join(grunt_jobpath, grunt_jobfnm)
     projnm = read_string(jfn)
     if projnm == None:
-        print("Error: newproj-server: no valid project name found in: " + grunt_jobfnm)
+        print("Error: newproj-server: no valid project name found in: " + grunt_jobfnm, flush=True)
         return
-    print("running grunt.py newproj " + projnm)
+    print("running grunt.py newproj " + projnm, flush=True)
     subprocess.run(["python3", "grunt.py", "newproj", projnm])
     
 def commit_jobs():
@@ -277,8 +277,8 @@ def commit_results():
 #  starts running here    
     
 if len(sys.argv) != 2:
-    print("usage: grund_sub.py ~/grunt/wc/server/username/projname")
-    print("  1 argument needed, but " + str(len(sys.argv) - 1) + " given")
+    print("usage: grund_sub.py ~/grunt/wc/server/username/projname", flush=True)
+    print("  1 argument needed, but " + str(len(sys.argv) - 1) + " given", flush=True)
     exit(1)
 elif os.path.isdir(sys.argv[1]):
     grunt_wc = sys.argv[1]
@@ -286,17 +286,17 @@ elif os.path.isdir(sys.argv[1]):
     try:
         grunt_jobs_repo = Repo(grunt_jobs)
     except Exception as e:
-        print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e))
+        print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e), flush=True)
         exit(3)
 
     grunt_results = os.path.join(grunt_wc,"results")
     try:
         grunt_results_repo = Repo(grunt_results)
     except Exception as e:
-        print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e))
+        print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e), flush=True)
         exit(3)
 else:
-    print("The path given is not a valid directory")
+    print("The path given is not a valid directory", flush=True)
     exit(2)
 
 grunt_jobs_shafn = os.path.join(grunt_jobs,"last_processed_commit.sha")

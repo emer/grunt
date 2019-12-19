@@ -192,6 +192,15 @@ def print_job_list(jobid):
     print('\n'.join(table))
     print()
         
+def diff_jobs(jobid1, jobid2):
+    job1 = os.path.join(grunt_active, jobid1, grunt_proj)
+    job2 = os.path.join(grunt_active, jobid2, grunt_proj)
+    subprocess.run(["diff","-uw","-x", "job.*", "-x", "grcmd.*", job1, job2])
+        
+def diff_job(jobid):
+    job = os.path.join(grunt_active, jobid, grunt_proj)
+    subprocess.run(["diff","-uw", "-x", "job.*", "-x", "jobs.*", "-x", "grcmd.*", "-x", "gresults", "-x", ".*", "./", job])
+        
 def done_job_needs_update(jobid):
     # if job.end is later than grcmd.update (or it doesn't even exist), then needs update
     jobdir = os.path.join(grunt_active, jobid, grunt_proj)
@@ -544,16 +553,19 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified\n")
 
-    print("out\t <jobid..> displays the job.out output for given job(s)\n")
-
-    print("ls\t <jobid..> displays the job.list file list for given job(s)\n")
-
     print("update\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")
     print("\t with no jobid it does generic update on all running jobs.")
     print("\t automatically does link on jobs to make easy to access from orig source.\n")
 
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
+
+    print("out\t <jobid..> displays the job.out output for given job(s)\n")
+
+    print("ls\t <jobid..> displays the job.list file list for given job(s)\n")
+
+    print("diff\t <jobid1> [jobid2] displays the diffs between either given job and current")
+    print("\t directory, or between two jobs directories\n")
 
     print("link\t <jobid..> make symbolic links into local gresults/jobid for job results")
     print("\t this makes it easier to access the results -- this happens automatically at update\n")
@@ -653,6 +665,14 @@ elif (cmd == "ls" or cmd == "list"):
     for jb in job_args:
         grunt_jobid = jb
         print_job_list(grunt_jobid)
+elif (cmd == "diff"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    if len(sys.argv) == 4:
+        diff_jobs(sys.argv[2], sys.argv[3])
+    else:
+        diff_job(sys.argv[2])
 elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")

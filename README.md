@@ -136,16 +136,19 @@ jobs	 [active|done] shows lists of all jobs, or specific subset (active = runnin
 status	 [jobid] pings the server to check status and update job status files
 	 on all running and pending jobs if no job specified
 
-out	 <jobid..> displays the job.out output for given job(s)
-
-ls	 <jobid..> displays the job.list file list for given job(s)
-
 update	 [jobid] [files..] push current job results to results git repository
 	 with no files listed uses grunter.py results command on server for list.
 	 with no jobid it does generic update on all running jobs.
 	 automatically does link on jobs to make easy to access from orig source.
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
+
+out	 <jobid..> displays the job.out output for given job(s)
+
+ls	 <jobid..> displays the job.list file list for given job(s)
+
+diff	 <jobid1> [jobid2] displays the diffs between either given job and current
+	 directory, or between two jobs directories
 
 link	 <jobid..> make symbolic links into local gresults/jobid for job results
 	 this makes it easier to access the results -- this happens automatically at update
@@ -165,7 +168,6 @@ newproj	 <projname> [remote-url] creates new project repositories -- for use on 
 
 newproj-server	 <projname> calls: newproj projname on server -- use in existing proj
 	 to create a new project
-
 ```
 
 # Details
@@ -198,8 +200,6 @@ Here are some tips for effective use of this tool:
 * Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archive`d.
 
 # TODO
-
-* add a `diff` command that does diffs between two job runs per file -- very handy
 
 * it might get kinda slow checking a bunch of different project repos on grund, esp with a slow filesystem.
 
