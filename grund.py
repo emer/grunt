@@ -72,6 +72,20 @@ print("grunt_user: " + grunt_user, flush=True)
     
 # grunt_wc is the working directory path
 grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
+
+if not os.path.isdir(grunt_wc):
+    choice = str(input("Grunt working copy(" + grunt_wc + ") is not yet present. Do you want to create it? (Y/n): "))
+    if (choice.lower() == "y" or choice.lower() == "yes" or choice == ""):
+        p = Path(grunt_wc)
+        p.mkdir(parents=True)
+    else:
+        print("You will need to manually create grunt working copy first then.")
+        fnm = "grund.lock"
+        if os.path.isfile(fnm):
+            os.remove(fnm)
+        exit(1)
+        
+    
 print("grund is starting to monitor jobs in grunt_wc: " + grunt_wc, flush=True)
 
 while True:
