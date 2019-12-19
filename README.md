@@ -201,5 +201,11 @@ Here are some tips for effective use of this tool:
 
 # TODO
 
+* how to gain access to other user's results?
+
+* save git sha's for various key commands like submit, update, delete -- issue is circularity -- these would only be avail on subsequent commit after that one.
+
+* undelete -- basically a git command that undoes the delete commit..
+
 * it might get kinda slow checking a bunch of different project repos on grund, esp with a slow filesystem.
 
