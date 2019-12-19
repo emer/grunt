@@ -28,6 +28,7 @@ def open_servername(fnm):
         return False
 
 def get_server():
+    global grunt_server
     cf = "grunt.server"
     if open_servername(cf):
         print("using specific server: " + grunt_server + " from: " + fnm)
@@ -37,6 +38,7 @@ def get_server():
             cnm = str(input("enter name of default server to use: "))
             with open(df, "w") as f:
                 f.write(cnm + "\n")
+            grunt_server = cnm
             
 def open_projname(fnm):
     global grunt_proj
