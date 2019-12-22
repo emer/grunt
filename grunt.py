@@ -620,7 +620,7 @@ if (cmd == "submit"):
         for i in range(2, narg-2):
             arg = sys.argv[i]
             f.write(arg + "\n")
-        grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
+    grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
     write_cmd(grunt_jobid, cmd, timestamp())
     grunt_jobs_repo.index.commit("Submit job: " + grunt_jobid + " " + message)
     grunt_jobs_repo.remotes.origin.push()
