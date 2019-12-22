@@ -616,7 +616,7 @@ if (cmd == "submit"):
     grunt_jobs_repo.git.add(os.path.join(new_job,'job.message'))
     with open("job.args","w") as f:
         for i in range(2, narg-2):
-            arg = sys.args[i]
+            arg = sys.argv[i]
             f.write(arg + "\n")
         grunt_jobs_repo.git.add(os.path.join(new_job,'job.args'))
     write_cmd(grunt_jobid, cmd, timestamp())

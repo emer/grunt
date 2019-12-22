@@ -181,7 +181,7 @@ def call_grunter(grcmd):
     print("Calling grunter for job: " + grunt_jobdir + " cmd: " + grcmd, flush=True)
     os.chdir(grunt_jobpath)
     if (not os.path.isfile("grunter.py")):
-        print("Error: grunter.py script not found -- MUST be present and checked into git!", flush=True)
+        print("Error: grunter.py script not found -- MUST be present!", flush=True)
         return
     try:
         subprocess.run(["python3","grunter.py", grcmd])
@@ -208,7 +208,7 @@ def update_job():
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     else:
         if (not os.path.isfile("grunter.py")):
-            print("Error: grunter.py script not found -- MUST be present and checked into git!", flush=True)
+            print("Error: grunter.py script not found -- MUST be present!", flush=True)
             return
         p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
         for f in p.splitlines():

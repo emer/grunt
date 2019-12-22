@@ -207,5 +207,9 @@ Here are some tips for effective use of this tool:
 
 * undelete -- basically a git command that undoes the delete commit..
 
+* if grund_sub is still processing one command and another is checked in, it can fail to notice apparently.  but critically it doesn't lose that job -- just need to push another one to get it to register.  
+
+* daemon heartbeat timestamp to ensure that it is running -- like what we had in cluster run.  issue is that we don't have any fully general repo so we'd have to stick it in each jobs repo -- this suggests that maybe we do want to have a master 'grunt' project repo that is where all the general stuff goes, and is used for newproj-server.
+
 * it might get kinda slow checking a bunch of different project repos on grund, esp with a slow filesystem.
 
