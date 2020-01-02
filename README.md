@@ -130,6 +130,8 @@ submit	 [args] -m 'message' submits git controlled files in current dir to jobs 
 	 git commit triggers update of server git repo, and grund daemon then submits the new job.
 	 you *must* have grunter.py script in the project dir to manage actual submission!
 	 see example in https://github.com/emer/grunt repository.
+	 
+cancel   [jobid] will cancel a running or pending job
 
 jobs	 [active|done] shows lists of all jobs, or specific subset (active = running, pending)
 
