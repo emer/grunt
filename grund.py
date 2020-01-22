@@ -13,6 +13,22 @@ import time
 import subprocess
 from pathlib import Path
 
+# grunt_clust is server name -- default is in ~.grunt.defserver
+grunt_clust = ""
+get_server()
+            
+# grunt_root is ~/grunt
+# you can symlink ~/grunt somewhere else if you want but let's keep it simple
+grunt_root = os.path.join(str(Path.home()), "grunt")
+print ("grunt_root: " + grunt_root)
+
+# grunt_user is user name
+grunt_user = getpass.getuser()
+print("grunt_user: " + grunt_user, flush=True)
+    
+# grunt_wc is the working directory path
+grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
+
 if len(sys.argv) == 2 and sys.argv[1] == "restart":
     fnm = "grund.lock"
     if os.path.isfile(fnm):
@@ -20,6 +36,21 @@ if len(sys.argv) == 2 and sys.argv[1] == "restart":
     fnm = "nohup.out"
     if os.path.isfile(fnm):
         os.remove(fnm)
+    # update all commit hashes to current head, to guarantee no stale jobs
+    for f in os.listdir(grunt_wc):
+        grunt_proj = os.path.join(grunt_wc,f)
+        grunt_jobs = os.path.join(grunt_proj, "jobs")
+        grunt_jobs_repo = 0
+        try:
+            grunt_jobs_repo = Repo(grunt_jobs)
+        except Exception as e:
+            print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e), flush=True)
+            exit(3)
+        grunt_jobs_repo.remotes.origin.pull()
+        grunt_jobs_shafn = os.path.join(grunt_jobs,"last_commit_done.sha")
+        cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
+        with open(grunt_jobs_shafn, "w") as f:
+            f.write(cur_commit_hash)
     exit(0)
 
 def check_lockfile():
@@ -57,22 +88,6 @@ def get_server():
             with open(df, "w") as f:
                 f.write(cnm + "\n")
             
-# grunt_clust is server name -- default is in ~.grunt.defserver
-grunt_clust = ""
-get_server()
-            
-# grunt_root is ~/grunt
-# you can symlink ~/grunt somewhere else if you want but let's keep it simple
-grunt_root = os.path.join(str(Path.home()), "grunt")
-print ("grunt_root: " + grunt_root)
-
-# grunt_user is user name
-grunt_user = getpass.getuser()
-print("grunt_user: " + grunt_user, flush=True)
-    
-# grunt_wc is the working directory path
-grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
-
 if not os.path.isdir(grunt_wc):
     choice = str(input("Grunt working copy(" + grunt_wc + ") is not yet present. Do you want to create it? (Y/n): "))
     if (choice.lower() == "y" or choice.lower() == "yes" or choice == ""):

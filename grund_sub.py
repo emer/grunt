@@ -57,6 +57,15 @@ grunt_jobfnm = ""
 # set by get_command
 grunt_cmd = ""
 
+# last_commit_done_hash is the git hash for the last jobs commit that
+# has at least started to be processed
+last_commit_done_hash = ""
+
+# cur_commit_hash is the git hash for the current repo head that we
+# are currently processing -- this will be last_commit_done_hash
+# next time through
+cur_commit_hash = ""
+
 # get_command gets job file paths based on a job_file which is relative to project 
 # returns True if is a valid command file, otherwise False
 def get_command(job_file):
@@ -148,6 +157,14 @@ def read_timestamp_to_local(fnm):
         return dstr
     return timestamp_local(dt)
     
+
+def write_status(fnm):
+    # writes current status in a status file: timestamp, jobs commit
+    with open(fnm,"w") as f:
+        f.write("time: " + timestamp() + "\n")
+        f.write("commit_done: " + last_commit_done_hash + "\n")
+        f.write("commit_cur: " + cur_commit_hash + "\n")
+       
 file_list_header = ["File", "Size", "Modified"]
     
 def list_files(ldir):
@@ -258,21 +275,19 @@ def newproj_server():
     subprocess.run(["python3", "grunt.py", "newproj", projnm])
     
 def commit_jobs():
-    commit = str(grunt_jobs_repo.heads.master.commit)
-    with open(grunt_jobs_shafn, "w") as f:
-        f.write(commit)
-    grunt_jobs_repo.git.add(grunt_jobs_shafn)
-    grunt_jobs_repo.index.commit("GRUND: done up to commit " + commit)
+    jstat = os.path.join(grunt_jobs, "grund_status.txt")
+    write_status(jstat)
+    grunt_jobs_repo.git.add(jstat)
+    grunt_jobs_repo.index.commit("GRUND: processed from: " + last_commit_done_hash + " to: " + cur_commit_hash)
     grunt_jobs_repo.remotes.origin.push()
     
 def commit_results():
-    commit = str(grunt_results_repo.heads.master.commit)
-    with open(grunt_results_shafn, "w") as f:
-        f.write(commit)
-    grunt_results_repo.git.add(grunt_results_shafn)
-    grunt_results_repo.index.commit("GRUND: done up to commit " + commit)
+    rstat = os.path.join(grunt_results, "grund_status.txt")
+    write_status(rstat)
+    grunt_results_repo.git.add(rstat)
+    grunt_results_repo.index.commit("GRUND: processed from: " + last_commit_done_hash + " to: " + cur_commit_hash)
     grunt_results_repo.remotes.origin.push()
-    
+
 ###################################################################
 #  starts running here    
     
@@ -299,9 +314,8 @@ else:
     print("The path given is not a valid directory", flush=True)
     exit(2)
 
-grunt_jobs_shafn = os.path.join(grunt_jobs,"last_processed_commit.sha")
-grunt_results_shafn = os.path.join(grunt_results,"last_processed_commit.sha")
-    
+grunt_jobs_shafn = os.path.join(grunt_jobs,"last_commit_done.sha")
+
 grunt_jobs_repo.remotes.origin.pull()
 grunt_results_repo.remotes.origin.pull()
 
@@ -309,13 +323,18 @@ grunt_results_repo.remotes.origin.pull()
 
 if os.path.isfile(grunt_jobs_shafn):
     with open(grunt_jobs_shafn, "r") as f:
-        last_processed_commit_hash = f.readline()
+        last_commit_done_hash = f.readline()
+    # update immediately to the current hash so even if we crash
+    # commands are not repeated!
+    cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
+    with open(grunt_jobs_shafn, "w") as f:
+        f.write(cur_commit_hash)
     check_for_updates = True
     com_jobs = False
     com_results = False
     if grunt_debug:
-        print("Begin processing commits from hash: " + last_processed_commit_hash, flush=True)
-    last_to_head = last_processed_commit_hash + "..HEAD"
+        print("Begin processing commits from hash: " + last_commit_done_hash, flush=True)
+    last_to_head = last_commit_done_hash + "..HEAD"
     most_recent_head = None
     for cm in grunt_jobs_repo.iter_commits(rev=last_to_head):
         if most_recent_head == None:
@@ -351,19 +370,13 @@ if os.path.isfile(grunt_jobs_shafn):
         commit_results()
     exit(0)    
 else:
-    print(grunt_jobs_repo.heads.master.commit)
-    with open(grunt_jobs_shafn, "a") as f:
-        f.write(str(grunt_jobs_repo.heads.master.commit))
-    grunt_jobs_repo.git.add(grunt_jobs_shafn)
-    grunt_jobs_repo.index.commit("GRUND: First commit")
-    grunt_jobs_repo.remotes.origin.push()
-    print(grunt_jobs_repo.heads.master.commit)
-
-    with open(grunt_results_shafn, "a") as f:
-        f.write(str(grunt_results_repo.heads.master.commit))
-    grunt_results_repo.git.add(grunt_results_shafn)
-    grunt_results_repo.index.commit("GRUND: First commit")
-    grunt_results_repo.remotes.origin.push()
+    cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
+    last_commit_done_hash = cur_commit_hash
+    print(cur_commit_hash)
+    with open(grunt_jobs_shafn, "w") as f:
+        f.write(cur_commit_hash)
+    commit_jobs()
+    commit_results()
     exit(0)
 
 
