@@ -12,7 +12,27 @@ import sys
 import time
 import subprocess
 from pathlib import Path
+from git import Repo
 
+def open_servername(fnm):
+    global grunt_clust
+    if os.path.isfile(fnm):
+        with open(fnm, "r") as f:
+            grunt_clust = str(f.readline()).rstrip()
+        print("server is: " + grunt_clust + " from: " + fnm, flush=True)
+        return True
+    else:
+        return False
+
+def get_server():
+    cf = "grunt.server"
+    if not open_servername(cf):
+        df = os.path.join(str(Path.home()), ".grunt.defserver")
+        if not open_servername(df):
+            cnm = str(input("enter name of default server to use: "))
+            with open(df, "w") as f:
+                f.write(cnm + "\n")
+            
 # grunt_clust is server name -- default is in ~.grunt.defserver
 grunt_clust = ""
 get_server()
@@ -51,6 +71,7 @@ if len(sys.argv) == 2 and sys.argv[1] == "restart":
         cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
         with open(grunt_jobs_shafn, "w") as f:
             f.write(cur_commit_hash)
+        print("for proj: " + grunt_proj + " reset last_commit_done.sha to current head: " + cur_commit_hash)
     exit(0)
 
 def check_lockfile():
@@ -69,25 +90,6 @@ def check_lockfile():
 
 check_lockfile()
         
-def open_servername(fnm):
-    global grunt_clust
-    if os.path.isfile(fnm):
-        with open(fnm, "r") as f:
-            grunt_clust = str(f.readline()).rstrip()
-        print("server is: " + grunt_clust + " from: " + fnm, flush=True)
-        return True
-    else:
-        return False
-
-def get_server():
-    cf = "grunt.server"
-    if not open_servername(cf):
-        df = os.path.join(str(Path.home()), ".grunt.defserver")
-        if not open_servername(df):
-            cnm = str(input("enter name of default server to use: "))
-            with open(df, "w") as f:
-                f.write(cnm + "\n")
-            
 if not os.path.isdir(grunt_wc):
     choice = str(input("Grunt working copy(" + grunt_wc + ") is not yet present. Do you want to create it? (Y/n): "))
     if (choice.lower() == "y" or choice.lower() == "yes" or choice == ""):
@@ -100,7 +102,7 @@ if not os.path.isdir(grunt_wc):
             os.remove(fnm)
         exit(1)
         
-    
+ 
 print("grund is starting to monitor jobs in grunt_wc: " + grunt_wc, flush=True)
 
 while True:
