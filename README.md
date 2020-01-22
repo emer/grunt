@@ -56,10 +56,10 @@ or however you run python3 on server.  The `grund_sub.py` script must be in the 
 $ tail -f nohup.out
 ```
 
-There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), start with the restart arg which will clear the lock file and the nohup.out file. Then start the daemon as usual:
+There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), run the `restart` command which will clear the lock file and the `nohup.out` file, and reset each repo to track the current repo head (i.e., any prior commands will be ignored -- you will have to resbumit). Then start the daemon as usual:
 
 ```bash
-$ nohup python3 grund.py restart &
+$ python3 grund.py restart
 ```
 
 ## SSH

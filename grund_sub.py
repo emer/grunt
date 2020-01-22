@@ -202,8 +202,8 @@ def call_grunter(grcmd):
         return
     try:
         subprocess.run(["python3","grunter.py", grcmd])
-    except subprocess.CalledProcessError:
-        print("Failed to run grunter.py script", flush=True)
+    except subprocess.SubprocessError as e:
+        print("grunter.py script error: " + str(e), flush=True)
         return
     add_job_files(grunt_jobid)
         
@@ -220,19 +220,30 @@ def update_job():
             if len(f) == 0:  # why is it even doing this?
                 continue
             rf = os.path.join(rdir,f)
-            shutil.copyfile(f, rf)
+            try:
+                shutil.copyfile(f, rf)
+            except OSError as e:
+                print("copy err: " + str(e), flush=True)
             print("added results: " + rf, flush=True)
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     else:
         if (not os.path.isfile("grunter.py")):
             print("Error: grunter.py script not found -- MUST be present!", flush=True)
             return
-        p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
+        p = ""
+        try:
+            p = subprocess.check_output(["python3", "grunter.py", "results"], universal_newlines=True)
+        except subprocess.SubprocessError as e:
+            print("grunter results error: " + str(e), flush=True)
+            return
         for f in p.splitlines():
             if len(f) == 0:  # why is it even doing this?
                 continue
             rf = os.path.join(rdir,f)
-            shutil.copyfile(f, rf)
+            try:
+                shutil.copyfile(f, rf)
+            except OSError as e:
+                print("copy err: " + str(e), flush=True)
             print("added results: " + rf, flush=True)
             grunt_results_repo.git.add(os.path.join(grunt_jobdir,f))
     add_job_files(grunt_jobid)
@@ -242,9 +253,15 @@ def delete_job():
     sli = grunt_jobdir.index("/")
     deldir = "delete" + jdir[sli:]
     os.chdir(grunt_jobs)
-    subprocess.run(["git", "mv", jdir, deldir])
+    try:
+        subprocess.run(["git", "mv", jdir, deldir])
+    except subprocess.SubprocessError as e:
+        print("git mv error: " + str(e), flush=True)
     os.chdir(grunt_results)
-    subprocess.run(["git", "rm", "-r", "-f", jdir])
+    try:
+        subprocess.run(["git", "rm", "-r", "-f", jdir])
+    except subprocess.SubprocessError as e:
+        print("git rm error: " + str(e), flush=True)
     shutil.rmtree(jdir, ignore_errors=True, onerror=None)
 
 def archive_job():
@@ -252,17 +269,29 @@ def archive_job():
     sli = grunt_jobdir.index("/")
     deldir = "archive" + jdir[sli:]
     os.chdir(grunt_jobs)
-    subprocess.run(["git", "mv", jdir, deldir])
+    try:
+        subprocess.run(["git", "mv", jdir, deldir])
+    except subprocess.SubprocessError as e:
+        print("git mv error: " + str(e), flush=True)
     os.chdir(grunt_results)
-    subprocess.run(["git", "mv", jdir, deldir])
+    try:
+        subprocess.run(["git", "mv", jdir, deldir])
+    except subprocess.SubprocessError as e:
+        print("git mv error: " + str(e), flush=True)
 
 def nuke_job():
     jdir = os.path.split(grunt_jobdir)[0]
     os.chdir(grunt_jobs)
-    subprocess.run(["git", "rm", "-r", "-f", jdir])
+    try:
+        subprocess.run(["git", "rm", "-r", "-f", jdir])
+    except subprocess.SubprocessError as e:
+        print("git rm error: " + str(e), flush=True)
     shutil.rmtree(jdir, ignore_errors=True, onerror=None)
     os.chdir(grunt_results)
-    subprocess.run(["git", "rm", "-r", "-f", jdir])
+    try:
+        subprocess.run(["git", "rm", "-r", "-f", jdir])
+    except subprocess.SubprocessError as e:
+        print("git rm error: " + str(e), flush=True)
     shutil.rmtree(jdir, ignore_errors=True, onerror=None)
 
 def newproj_server():
@@ -272,7 +301,10 @@ def newproj_server():
         print("Error: newproj-server: no valid project name found in: " + grunt_jobfnm, flush=True)
         return
     print("running grunt.py newproj " + projnm, flush=True)
-    subprocess.run(["python3", "grunt.py", "newproj", projnm])
+    try:
+        subprocess.run(["python3", "grunt.py", "newproj", projnm])
+    except subprocess.SubprocessError as e:
+        print("newproj error: " + str(e), flush=True)
     
 def commit_jobs():
     jstat = os.path.join(grunt_jobs, "grund_status.txt")
