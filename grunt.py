@@ -31,7 +31,7 @@ def get_server():
     global grunt_server
     cf = "grunt.server"
     if open_servername(cf):
-        print("using specific server: " + grunt_server + " from: " + fnm)
+        print("using specific server: " + grunt_server + " from: " + cf)
     else:
         df = os.path.join(str(Path.home()), ".grunt.defserver")
         if not open_servername(df):
@@ -647,7 +647,7 @@ elif (cmd == "status"):
         commit_cmd(cmd)
     else:           
         job_args = glob_job_args(sys.argv[2:], grunt_active)
-        for jb in jobs_args:
+        for jb in job_args:
             grunt_jobid = jb
             write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)

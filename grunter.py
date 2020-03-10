@@ -42,6 +42,10 @@ tasks_per_node = 1
 # qos is the queue name
 qos = "blanca-ccn"
 
+# in other cases, you might have to specify a partition
+# partition = "low"
+
+
 ##############################################################
 # main vars
 
@@ -139,6 +143,7 @@ def write_sbatch():
     f.write("#SBATCH --cpus-per-task=" + str(cpus_per_task) + "\n")
     f.write("#SBATCH --ntasks-per-node=" + str(tasks_per_node) + "\n")
     f.write("#SBATCH --qos=" + qos + "\n")
+#     f.write("#SBATCH --partition=" + partition + "\n")
     f.write("#SBATCH --output=job.out\n")
     f.write("#SBATCH --mail-type=FAIL\n")
     f.write("#SBATCH --mail-user=" + grunt_user + "\n")
