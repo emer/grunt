@@ -164,6 +164,10 @@ def copy_to_jobs(new_job):
     for f in p.splitlines():
         if f == "grunter.py":
             gotGrunter = True
+        dirnm = os.path.dirname(f)
+        if dirnm:
+            jd = os.path.join(new_job,dirnm)
+            os.makedirs(jd)
         jf = os.path.join(new_job,f)
         shutil.copyfile(f, jf)
         grunt_jobs_repo.git.add(jf)
@@ -550,10 +554,12 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t you *must* have grunter.py script in the project dir to manage actual submission!")
     print("\t see example in https://github.com/emer/grunt repository.\n")
 
-    print("jobs\t [active|done] shows lists of all jobs, or specific subset (active = running, pending)\n")
+    print("jobs\t [active|done] shows lists of all jobs, or specific subset")
+    print("\t (active = running, pending) -- ONLY reflects the last status results:")
+    print("\t do status to get latest job status from server, then jobs again in ~10 sec\n")
 
     print("status\t [jobid] pings the server to check status and update job status files")
-    print("\t on all running and pending jobs if no job specified\n")
+    print("\t on all running and pending jobs if no job specified -- use jobs to see results\n")
 
     print("update\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")

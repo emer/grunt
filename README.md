@@ -8,7 +8,7 @@ The central principles are:
 
 * There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
 
-* Each project has its own grunt git repositories, on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  All repositories live under `~/grunt/`.
+* Each project has its own grunt git repositories ( *entirely separate from your "local" e.g., github repository* ), on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  All repositories live under `~/grunt/`.
 
 * The primary function is to submit and manage **jobs**, by copying all the relevant source code (and anything else in the local git as shown by `git ls-files`) to a uniquely-named `jobid` directory under the `jobs` repository, and passing the `submit` command to the local `grunter.py` script ("extensible runner" -- this script is always copied whether it is under git control or not).  Typically this submit command submits a job to the server's `slurm` queue, but it can do anything you want.  As the job runs, it can produce **results** files, which can be pushed to a separate, parallel `results` repository, that can be pulled down to the client.
 
@@ -20,10 +20,13 @@ The central principles are:
 
 # Install
 
-On both client and server (cluster) you first clone the repo wherever you want:
+On both client and server (cluster) you first clone the repo wherever you want -- this example assumes you're using the rest of the emergent Go code -- it is convenient to have grunt in the same GOPATH location, and to also have a symbolic link in your home dir to emer if you don't already.  Also, it is *not* a good idea to clone into `~/grunt` as that will be the location of the grunt-controlled git repositories, so you don't want to end up with an outer git repository there.
 
 ```bash
+$ cd ~/go/src/github.com/emer
 $ git clone https://github.com/emer/grunt.git
+$ cd ~
+$ ln -s go/src/github.com/emer .    # make a sym link to emer in your home dir for easy access
 ```
 
 and install `gitpython` package -- use the `--user` option on the server as you typically don't have sudo write ability.
@@ -56,7 +59,7 @@ or however you run python3 on server.  The `grund_sub.py` script must be in the 
 $ tail -f nohup.out
 ```
 
-There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), run the `restart` command which will clear the lock file and the `nohup.out` file, and reset each repo to track the current repo head (i.e., any prior commands will be ignored -- you will have to resbumit). Then start the daemon as usual:
+There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), run the `restart` command which will clear the lock file and the `nohup.out` file, and reset each repo to track the current repo head (i.e., any prior commands will be ignored -- you will have to resubmit). Then start the daemon as usual:
 
 ```bash
 $ python3 grund.py restart
@@ -66,7 +69,11 @@ $ python3 grund.py restart
 
 The system uses ssh between client and server to sync the git repositories, so you need good direct ssh access.
 
-That there are handy ssh config options that will keep an ssh channel authenticated if you have an existing ssh session open:
+*If you can just directly ssh into the server from your client without entering a password, you're good -- no further steps required!*
+
+### Configuring SSH to not require further authentication every time
+
+If your system is configured to require a two-factor-authentication or something like that at each login, the following are handy ssh config options that will keep an ssh channel authenticated if you have an existing ssh session open.  The strategy here is to keep one such ssh channel permanently open, and then all the other ones can piggyback on top of that.
 
 ```bash
 ~/.ssh/config:
@@ -77,7 +84,7 @@ ControlPath ~/.ssh/sockets/%r@%h:%p
 
 where `blogin01.rc*` is the start of server host names that you want to do this for.
 
-If you don't have a `sockets` directory in .ssh create one
+If you don't have a `sockets` directory in .ssh create one using `mkdir`.
 
 Then you can do `screen` locally on your client, ssh into your server, and then kill that terminal window -- the screen keeps that session running in the background indefinitely.  use `screen -R` to reconnect to an existing screen session when you need to reconnect the master ssh connection.
 
@@ -95,13 +102,13 @@ The `projname` is the directory name where you execute the `grunt.py submit` job
 
 The server has the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
 
-* To initialize a new project on the server, run this command (can be done anywhere):
+* To initialize a new project on the **server**, run this command (can be done anywhere):
 
 ```bash
 $ python3 grunt.py newproj projname
 ```
 
-* Once that completes, then on the client, do:
+* Once that completes, then on the **client**, do:
 
 ```bash
 $ grunt newproj projname username@server.at.university.edu
@@ -109,11 +116,26 @@ $ grunt newproj projname username@server.at.university.edu
 
 where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
 
-After you've created your first project, you can trigger remote project creation in an existing project using:
+After you've created your first project, you can trigger remote project creation in an *existing* project on the client using:
 
 ```bash
 $ grunt newproj-server projname
 ```
+
+## Copy and Configure your `grunter.py` script
+
+For each project, you must have a working `grunter.py` python script that actually submits the job on the cluster.  For your first project, you should copy this from the grunt directory:
+
+```bash
+$ cp ~/emer/grunt/grunter.py .    # use actual path to emer repo
+$ edit grunter.py   # use your actual editor here!
+```
+
+Take some time to read over the script -- the top has the key variables that you'll need to configure specifically for each project in terms of how many processors, how much memory, time etc.  These are used in the `write_sbatch()` function which *must be customized for your server* -- once you do this for your particular server, then you can usually just copy from another project.
+
+You will have to read your server's documentation and edit the python code to generate an appropriate `sbatch` submission script depending on details of your server.  The example `grunter.py` file contains some tips and options that work across the two servers we use.
+
+You can have the script `cd` into a subdirectory and run a project from there, to support multiple different executables or variations in the same repository, but *always run grunt from the root of the project* because it gets the project name from the directory name (and even if you put `grunt.projnm` in the subdirectory to fix that issue, the jobs.* files etc will not be coordinated if you run grunt from different directories -- it might work but could get confusing at least).
 
 # Usage
 
@@ -201,11 +223,15 @@ Here are some tips for effective use of this tool:
 
 * Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archive`d.
 
+# Troubleshooting
+
+* If you get mysterious git error messages, try running `git ls-liles` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
+
 # TODO
 
 * how to gain access to other user's results?
 
-* save git sha's for various key commands like submit, update, delete -- issue is circularity -- these would only be avail on subsequent commit after that one.
+* save git hashes for various key commands like submit, update, delete -- issue is circularity -- these would only be avail on subsequent commit after that one.
 
 * undelete -- basically a git command that undoes the delete commit..
 
