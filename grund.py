@@ -49,7 +49,7 @@ print("grunt_user: " + grunt_user, flush=True)
 # grunt_wc is the working directory path
 grunt_wc = os.path.join(grunt_root, "wc", grunt_clust, grunt_user)
 
-if len(sys.argv) == 2 and sys.argv[1] == "restart":
+if len(sys.argv) == 2 and sys.argv[1] == "reset":
     fnm = "grund.lock"
     if os.path.isfile(fnm):
         os.remove(fnm)
@@ -80,7 +80,7 @@ def check_lockfile():
         pid = ""
         with open(fnm, "r") as f:
             pid = str(f.readline()).rstrip()
-        print("ERROR: grund.lock says grund is already running at pid: " + pid + " -- run with restart if stale!")
+        print("ERROR: grund.lock says grund is already running at pid: " + pid + " -- do: 'ps -uaww | grep grund' to check for running grund jobs, and if none, do: 'python3 grund3.py reset' to reset, then run again ('nohup python3 grund.py')")
         exit(1)
         return True
     else:

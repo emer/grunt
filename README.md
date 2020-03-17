@@ -59,11 +59,19 @@ or however you run python3 on server.  The `grund_sub.py` script must be in the 
 $ tail -f nohup.out
 ```
 
-There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**.  If restarting grund after a crash or system downtime (there is no other way that the daemon normally terminates), run the `restart` command which will clear the lock file and the `nohup.out` file, and reset each repo to track the current repo head (i.e., any prior commands will be ignored -- you will have to resubmit). Then start the daemon as usual:
+There is a `grund.lock` lockfile that is created at startup, and checked before running, to prevent running multiple daemons at the same time, **which is very bad and leads to all manner of badness!!**. If you get this message, first check if any grund servers are running, e.g.:
 
 ```bash
-$ python3 grund.py restart
+$ ps -guaxww | grep grund
 ```
+
+If this shows that no jobs are running (i.e., for restarting grund after a crash or system downtime -- there is no other way that the daemon normally terminates), run the `reset` command which will clear the lock file and the `nohup.out` file, and reset each repo to track the current repo head (i.e., any prior commands will be ignored -- you will have to resubmit). 
+
+```bash
+$ python3 grund.py reset
+```
+
+Then start the daemon as shown above (nohup..)
 
 ## SSH
 
@@ -136,6 +144,8 @@ Take some time to read over the script -- the top has the key variables that you
 You will have to read your server's documentation and edit the python code to generate an appropriate `sbatch` submission script depending on details of your server.  The example `grunter.py` file contains some tips and options that work across the two servers we use.
 
 You can have the script `cd` into a subdirectory and run a project from there, to support multiple different executables or variations in the same repository, but *always run grunt from the root of the project* because it gets the project name from the directory name (and even if you put `grunt.projnm` in the subdirectory to fix that issue, the jobs.* files etc will not be coordinated if you run grunt from different directories -- it might work but could get confusing at least).
+
+Also, if there are any "external" resources that your job needs (e.g., large shared databases of image files), you should just write a command in your sbatch script to make a symbolic link to the relevant directory ( *on the server* ), and then have your project refer "locally" to that symlinked directory -- you can also manually create the same symlink on your client, so the code will run the same in both places, and others can use it too, without baking in a specific path in the code.
 
 # Usage
 
@@ -222,6 +232,31 @@ Here are some tips for effective use of this tool:
 * As in `git`, **it is essential to always use good -m messages** for each job `submit` -- a critical benefit of this tool is providing a record of each simulation run, and your goals and mental state at the point of submission are the best clues as to what this job was about, when you come back to it in a few days or weeks and have forgotten everything..
 
 * Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archive`d.
+
+## Recommended github project repository structure
+
+Because the grunt system is always copying all the files the current directory into the `jobs` directory for each `submit` command, including everything in subdirectories, it is a good idea to keep your other project-related files in other directories (e.g., good results you want to keep and analyze further, result plots, etc).  Just keep 
+
+```bash
+myproj
+  papers
+     paper1
+        paper1.tex
+     ...
+  figs
+     fig_myfinalpubfig1.svg
+     ...
+  results
+     myresult-data.log
+     ...
+  sims
+      myproj-v1     # more descriptive names might be even better..
+         myproj.go  # only code goes in here, plus grunter.py and anything else needed to run
+         params.go
+         ...
+      myproj-v2
+```
+
 
 # Troubleshooting
 
