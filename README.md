@@ -263,6 +263,8 @@ myproj
 
 * If you get mysterious git error messages, try running `git ls-files` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
 
+* If grunt pull isn't working check the list of results files in grunter.py that should be pulled.
+
 # TODO
 
 * how to gain access to other user's results?
