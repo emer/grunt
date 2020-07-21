@@ -173,8 +173,8 @@ def submit():
 
 def results():
     # important: update this to include any results you want to add to results repo
-    print("\n".join(glob.glob('*_epc.csv')))
-    print("\n".join(glob.glob('*_run.csv')))
+    print("\n".join(glob.glob('*_epc.tsv')))
+    print("\n".join(glob.glob('*_run.tsv')))
 
 def status():
     slid = read_string("job.slurmid")
