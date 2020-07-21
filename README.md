@@ -232,7 +232,7 @@ Here are some tips for effective use of this tool:
 
 * As in `git`, **it is essential to always use good -m messages** for each job `submit` -- a critical benefit of this tool is providing a record of each simulation run, and your goals and mental state at the point of submission are the best clues as to what this job was about, when you come back to it in a few days or weeks and have forgotten everything..
 
-* Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archive`d.
+* Because absolutely everything is backed by the `git` revision history, it is safe to `delete` (and even `nuke`) jobs, so you should use `delete` liberally to clean up `active` jobs, to keep your current state reflecting only the best results.  Anything that is used in a publication or is otherwise old but important, should be `archived`.
 
 ## Recommended github project repository structure
 
@@ -261,7 +261,7 @@ myproj
 
 # Troubleshooting
 
-* If you get mysterious git error messages, try running `git ls-liles` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
+* If you get mysterious git error messages, try running `git ls-files` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
 
 # TODO
 
