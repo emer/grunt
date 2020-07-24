@@ -80,7 +80,7 @@ def check_lockfile():
         pid = ""
         with open(fnm, "r") as f:
             pid = str(f.readline()).rstrip()
-        print("ERROR: grund.lock says grund is already running at pid: " + pid + " -- do: 'ps -uaww | grep grund' to check for running grund jobs, and if none, do: 'python3 grund3.py reset' to reset, then run again ('nohup python3 grund.py')")
+        print("ERROR: grund.lock says grund is already running at pid: " + pid + " -- do: 'ps -uaww | grep grund' to check for running grund jobs, and if none, do: 'python3 grund.py reset' to reset, then run again ('nohup python3 grund.py')")
         exit(1)
         return True
     else:
