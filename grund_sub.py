@@ -348,8 +348,12 @@ else:
 
 grunt_jobs_shafn = os.path.join(grunt_jobs,"last_commit_done.sha")
 
-grunt_jobs_repo.remotes.origin.pull()
-grunt_results_repo.remotes.origin.pull()
+try:
+    grunt_jobs_repo.remotes.origin.pull()
+    grunt_results_repo.remotes.origin.pull()
+except Exception as e:
+    print("git pull errors! " + str(e), flush=True)
+    exit(4)
 
 # Check if we have a valid commit sha1 hash as the last processed, so that we can pickup launching from there.
 
