@@ -108,7 +108,7 @@ grunt_jobnum = 0
 jobs_pending = []
 jobs_running = []
 jobs_done = []
-jobs_header =     ["JobId", "SlurmId", "Status", "SlurmStat", "Submit", "Start", "End", "Args", "Message"]
+jobs_header =     ["$JobId", "$SlurmId", "$Status", "$SlurmStat", "$Submit", "$Start", "$End", "$Args", "$Message"]
 jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
 
 def new_jobid():
@@ -561,9 +561,9 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all running and pending jobs if no job specified -- use jobs to see results\n")
 
-    print("update\t [jobid] [files..] push current job results to results git repository")
+    print("results\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")
-    print("\t with no jobid it does generic update on all running jobs.")
+    print("\t with no jobid it gets results on all running jobs.")
     print("\t automatically does link on jobs to make easy to access from orig source.\n")
 
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
@@ -576,7 +576,9 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t directory, or between two jobs directories\n")
 
     print("link\t <jobid..> make symbolic links into local gresults/jobid for job results")
-    print("\t this makes it easier to access the results -- this happens automatically at update\n")
+    print("\t this makes it easier to access the results -- this happens automatically in results cmd\n")
+
+    print("cancel\t <jobid..> cancel job on server\n")
 
     print("nuke\t <jobid..> deletes given job directory (jobs and results) -- use carefully!")
     print("\t useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs\n")
@@ -711,7 +713,7 @@ elif (cmd == "unlink"):
     for jb in job_args:
         grunt_jobid = jb
         unlink_results(grunt_jobid)
-elif (cmd == "update"):
+elif (cmd == "results"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
         for jb in jobs_pending:
@@ -734,11 +736,11 @@ elif (cmd == "update"):
         job_args = glob_job_args(sys.argv[2:], grunt_active)
         for jb in job_args:
             grunt_jobid = jb
-            write_commit_cmd(grunt_jobid, "update", timestamp())
+            write_commit_cmd(grunt_jobid, cmd, timestamp())
             link_results(grunt_jobid)
     else: # jobs, files
         grunt_jobid = sys.argv[2]
-        write_commit_cmd(grunt_jobid, "update", argslist())
+        write_commit_cmd(grunt_jobid, cmd, argslist())
         link_results(grunt_jobid)
 elif (cmd == "newproj"):
     if len(sys.argv) < 3:

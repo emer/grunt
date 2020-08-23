@@ -207,7 +207,7 @@ def call_grunter(grcmd):
         return
     add_job_files(grunt_jobid)
         
-def update_job():
+def results_job():
     os.chdir(grunt_jobpath)
     jfn = os.path.join(grunt_jobpath, grunt_jobfnm)
     ts = read_timestamp(jfn)
@@ -384,8 +384,8 @@ if os.path.isfile(grunt_jobs_shafn):
                 continue
             print("\ngrund command: " + grunt_cmd + " in: " + grunt_jobdir + " at: " + timestamp(), flush=True)
             com_jobs = True
-            if grunt_cmd == "update":
-                update_job()
+            if grunt_cmd == "results":
+                results_job()
                 com_results = True
             elif grunt_cmd == "nuke":
                 nuke_job()

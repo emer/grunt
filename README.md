@@ -113,21 +113,23 @@ The server has the "remote" git repository for your client, and thus you must fi
 * To initialize a new project on the **server**, run this command (can be done anywhere):
 
 ```bash
-$ python3 grunt.py newproj projname
+$ python3 grunt.py newproj <projname>
 ```
 
 * Once that completes, then on the **client**, do:
 
 ```bash
-$ grunt newproj projname username@server.at.university.edu
+$ grunt newproj <projname> <username@server.at.university.edu>
 ```
 
 where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
 
+If this step fails (e.g., due to a typo etc), you will have to go to `~/grunt/wc/server/username` and remove the `<projname>` directory there before retrying.
+
 After you've created your first project, you can trigger remote project creation in an *existing* project on the client using:
 
 ```bash
-$ grunt newproj-server projname
+$ grunt newproj-server <projname>
 ```
 
 ## Copy and Configure your `grunter.py` script
@@ -170,9 +172,9 @@ jobs	 [active|done] shows lists of all jobs, or specific subset
 status	 [jobid] pings the server to check status and update job status files
 	 on all running and pending jobs if no job specified -- use jobs to see results
 
-update	 [jobid] [files..] push current job results to results git repository
+results	 [jobid] [files..] push current job results to results git repository
 	 with no files listed uses grunter.py results command on server for list.
-	 with no jobid it does generic update on all running jobs.
+	 with no jobid it gets results on all running jobs.
 	 automatically does link on jobs to make easy to access from orig source.
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
@@ -186,6 +188,8 @@ diff	 <jobid1> [jobid2] displays the diffs between either given job and current
 
 link	 <jobid..> make symbolic links into local gresults/jobid for job results
 	 this makes it easier to access the results -- this happens automatically at update
+
+cancel	 <jobid..> cancel job on server
 
 nuke	 <jobid..> deletes given job directory (jobs and results) -- use carefully!
 	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
@@ -222,7 +226,7 @@ All job relevant output files are named `job.` and generically all `job.*` files
     + `job.start` -- timestamp when job actually starts (by `job.sbatch`)
     + `job.end` -- timestamp when job completes (also `job.sbatch`)
 
-* `job.list` -- csv list of files in dir (excluding all `job.*`,  `grcmd.*` files) updated by any command touching a given job (e.g., `status` or `update`) -- you can look at this with `grunt ls` to see what other files you might want to grab with `update`
+* `job.list` -- csv list of files in dir (excluding all `job.*`,  `grcmd.*` files) updated by any command touching a given job (e.g., `status` or `update`) -- you can look at this with `grunt ls` to see what other files you might want to grab with `results`
 
 * `job.canceled` -- timestamp when job canceled by `grunter.py` `cancel` command
 
