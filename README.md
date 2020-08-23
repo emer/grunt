@@ -39,6 +39,14 @@ $ pip3 install --user gitpython
 
 * Ensure that `grunt.py` is on your executable path (e.g., make a symbolic link to the git source copy in your own `~/bin` dir if that is on your `$PATH` -- you can name it just `grunt` to make it easier to type.)
 
+The `Makefile` has a command for this:
+
+```bash
+$ make link
+```
+
+or you can do it manually like this:
+
 ```bash
 $ ln -s ~/emer/grunt/grunt.py ~/bin/grunt
 ```
