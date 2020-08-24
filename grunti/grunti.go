@@ -7,17 +7,21 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/emer/etable/eplot"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etview"
 	_ "github.com/emer/etable/etview" // include to get gui views
 	"github.com/goki/gi/gi"
 	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/giv"
+	"github.com/goki/ki/dirs"
 	"github.com/goki/ki/ki"
 	"github.com/goki/ki/kit"
 )
@@ -40,23 +44,28 @@ const (
 
 // Grunt interfaces with grunt commands
 type Grunt struct {
-	StatMsg   string            `desc:"last status message"`
-	Active    *etable.Table     `view:"-" desc:"jobs table"`
-	Done      *etable.Table     `view:"-" desc:"jobs table"`
-	ActView   *etview.TableView `view:"-" desc:"table view"`
-	DoneView  *etview.TableView `view:"-" desc:"table view"`
-	OutView   *giv.TextView     `view:"-" desc:"text view"`
-	OutBuf    *giv.TextBuf      `view:"-" desc:"text buf"`
-	StatLabel *gi.Label         `view:"-" desc:"status label"`
-	Win       *gi.Window        `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar       `view:"-" desc:"the master toolbar"`
-	TabView   *gi.TabView       `view:"-" desc:"the tab view"`
-	CmdMu     sync.Mutex        `view:"-" desc:"command mutex"`
-	UpdtMu    sync.Mutex        `view:"-" desc:"update mutex"`
-	InUpdt    bool              `inactive:"+" desc:"true if currently in update loop"`
-	Timeout   time.Time         `view:"-" desc:"timout for auto updater"`
-	NextCmd   string            `view:"-" desc:"next command to run after current update has timed out"`
-	UpdtTick  *time.Ticker      `view:"-" desc:"update ticker"`
+	StatMsg  string            `desc:"last status message"`
+	ResList  Results           `desc:"list of loaded results"`
+	Active   *etable.Table     `desc:"jobs table"`
+	Done     *etable.Table     `desc:"jobs table"`
+	ActView  *etview.TableView `desc:"table view"`
+	DoneView *etview.TableView `desc:"table view"`
+	OutView  *giv.TextView     `desc:"text view"`
+	OutBuf   *giv.TextBuf      `desc:"text buf"`
+	ResView  *giv.TableView    `desc:"results table"`
+	Plot     *eplot.Plot2D     `desc:"plot"`
+	AggRes   *etable.Table     `desc:"aggregated results from multiple"`
+
+	StatLabel *gi.Label    `view:"-" desc:"status label"`
+	Win       *gi.Window   `view:"-" desc:"main GUI window"`
+	ToolBar   *gi.ToolBar  `view:"-" desc:"the master toolbar"`
+	TabView   *gi.TabView  `view:"-" desc:"the tab view"`
+	CmdMu     sync.Mutex   `view:"-" desc:"command mutex"`
+	UpdtMu    sync.Mutex   `view:"-" desc:"update mutex"`
+	InUpdt    bool         `inactive:"+" desc:"true if currently in update loop"`
+	Timeout   time.Time    `view:"-" desc:"timout for auto updater"`
+	NextCmd   string       `view:"-" desc:"next command to run after current update has timed out"`
+	UpdtTick  *time.Ticker `view:"-" desc:"update ticker"`
 }
 
 var KiT_Grunt = kit.Types.AddType(&Grunt{}, GruntProps)
@@ -68,6 +77,8 @@ var TheGrunt Grunt
 func (gr *Grunt) New() {
 	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
+	gr.ResList = make(Results, 0)
+	gr.ResList = append(gr.ResList, &Result{}) // dummy
 }
 
 // OpenJobs opens existing job files
@@ -212,6 +223,71 @@ func (gr *Grunt) Status() {
 // Results pings server for current job results
 func (gr *Grunt) Results() {
 	gr.RunGruntUpdt("results", gr.SelectedJobs(false))
+}
+
+// OpenResults opens results for selected jobs, for file name that contains given string,
+// and has given extension (csv = comma separated, tsv = tab separated)
+func (gr *Grunt) OpenResults(fileContains, ext string) {
+	jobs := gr.SelectedJobs(true) // need
+	if len(jobs) == 0 {
+		return
+	}
+	for _, jb := range jobs {
+		fnm := filepath.Join("gresults", jb)
+		fls := dirs.ExtFileNames(fnm, []string{ext})
+		for _, fl := range fls {
+			if strings.Contains(fl, fileContains) {
+				if len(gr.ResList) == 1 && gr.ResList[0].JobId == "" { // remove blank
+					gr.ResList = gr.ResList[:0]
+				}
+				gr.ResList.Add(jb, filepath.Join(fnm, fl))
+			}
+		}
+	}
+	gr.TabView.SelectTabByName("Results")
+	gr.ResView.Update()
+}
+
+// PlotResults plots selected (or all if none selected) opened Results
+// if multiple selected, they are merged into a single table and plotted by JobId
+func (gr *Grunt) PlotResults() {
+	sel := gr.ResView.SelectedIdxsList(false)
+	if len(sel) == 0 {
+		if len(gr.ResList) == 0 {
+			gr.StatusMsg("Plot: no results to plot")
+			return
+		}
+		for i := range gr.ResList {
+			sel = append(sel, i)
+		}
+	}
+	if len(sel) == 1 {
+		dt := gr.ResList[sel[0]].Table
+		if dt == nil {
+			gr.StatusMsg("Plot: nil table")
+			return
+		}
+		gr.Plot.SetTable(dt)
+	} else {
+		gr.AggRes = nil // reset
+		for i := range sel {
+			r := gr.ResList[sel[i]]
+			fmt.Printf("job: %d  %s\n", i, r.JobId)
+			dt := r.TableWithJobId()
+			if dt == nil {
+				continue
+			}
+			if gr.AggRes == nil {
+				gr.AggRes = dt
+			} else {
+				gr.AggRes.AppendRows(dt)
+			}
+		}
+		gr.Plot.Params.LegendCol = "JobId"
+		gr.Plot.SetTable(gr.AggRes)
+	}
+	gr.TabView.SelectTabByName("Plot")
+	gr.Plot.Update()
 }
 
 // Submit submits a new job, with optional space-separated args and a message
@@ -363,6 +439,7 @@ func (gr *Grunt) ActiveView() *etview.TableView {
 
 // StatusMsg displays current status / command being executed, etc
 func (gr *Grunt) StatusMsg(msg string) {
+	gr.StatMsg = msg
 	gr.StatLabel.SetText(msg)
 }
 
@@ -447,6 +524,16 @@ func (gr *Grunt) Config() *gi.Window {
 	txv.SetBuf(tb)
 	gr.OutView = txv
 
+	rsv := tv.AddNewTab(giv.KiT_TableView, "Results").(*giv.TableView)
+	rsv.SetStretchMax()
+	rsv.Viewport = vp
+	rsv.SetSlice(&gr.ResList)
+	gr.ResView = rsv
+
+	plt := tv.AddNewTab(eplot.KiT_Plot2D, "Plot").(*eplot.Plot2D)
+	plt.SetStretchMax()
+	gr.Plot = plt
+
 	// toolbar
 
 	tbar.AddAction(gi.ActOpts{Label: "Update", Icon: "update", Tooltip: "pull updates that might have been pushed from the server, for both results and jobs", UpdateFunc: func(act *gi.Action) {
@@ -461,12 +548,22 @@ func (gr *Grunt) Config() *gi.Window {
 		tbar.UpdateActions()
 	})
 
+	tbar.AddSeparator("res-sep")
+
 	tbar.AddAction(gi.ActOpts{Label: "Results", Icon: "file-upload", Tooltip: "tell server to commit latest results from selected jobs or running jobs if none selected"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Results()
 		tbar.UpdateActions()
 	})
 
-	tbar.AddSeparator("updt")
+	tbar.AddAction(gi.ActOpts{Label: "Open...", Icon: "file-open", Tooltip: "open results from selected job(s), according to file names containing given string -- results must be linked into gresults (auto by Results, see Link cmd)"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(gr, "OpenResults", vp)
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Plot", Icon: "image", Tooltip: "plot selected (or all if none selected) opened Results -- if multiple selected, they are merged into a single table and plotted by JobId"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gr.PlotResults()
+	})
+
+	tbar.AddSeparator("job-sep")
 
 	tbar.AddAction(gi.ActOpts{Label: "Submit...", Icon: "plus", Tooltip: "Submit a new job for running on server"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		giv.CallMethod(gr, "Submit", vp)
@@ -477,7 +574,7 @@ func (gr *Grunt) Config() *gi.Window {
 		tbar.UpdateActions()
 	})
 
-	tbar.AddSeparator("mv")
+	tbar.AddSeparator("file-sep")
 
 	tbar.AddAction(gi.ActOpts{Label: "Out", Icon: "info", Tooltip: "show output of selected job in Output tab"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Output()
@@ -510,7 +607,7 @@ func (gr *Grunt) Config() *gi.Window {
 		giv.CallMethod(gr, "MiscCmd", vp)
 	})
 
-	tbar.AddSeparator("del")
+	tbar.AddSeparator("del-sep")
 
 	tbar.AddAction(gi.ActOpts{Label: "Nuke!", Icon: "cancel", Tooltip: "deletes given job directory (jobs and results) -- use carefully: could result in permanent loss of non-comitted data!  useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gi.PromptDialog(vp, gi.DlgOpts{Title: "Nuke: Confirm", Prompt: "Are you <i>sure</i> you want to nuke job(s) -- this could result in permanent deletion of non-committed files!"}, gi.AddOk, gi.AddCancel,
@@ -569,6 +666,18 @@ func (gr *Grunt) Config() *gi.Window {
 
 var GruntProps = ki.Props{
 	"CallMethods": ki.PropSlice{
+		{"OpenResults", ki.Props{
+			"desc": "opens results for selected jobs, for file name that contains given string, and has given extension (e.g., .csv = comma separated, .tsv = tab separated)",
+			"Args": ki.PropSlice{
+				{"Filename Contains", ki.Props{
+					"width": 60,
+				}},
+				{"Ext", ki.Props{
+					"default": ".tsv",
+					"width":   60,
+				}},
+			},
+		}},
 		{"Submit", ki.Props{
 			"desc": "Specify additional args, space separated, and a message describing this job (key params, etc)",
 			"Args": ki.PropSlice{
