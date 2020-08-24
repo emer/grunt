@@ -58,6 +58,7 @@ type Grunt struct {
 	UpdtMu    sync.Mutex        `view:"-" desc:"update mutex"`
 	InUpdt    bool              `inactive:"+" desc:"true if currently in update loop"`
 	Timeout   time.Time         `view:"-" desc:"timout for auto updater"`
+	NextCmd   string            `view:"-" desc:"next command to run after current update has timed out"`
 	UpdtTick  *time.Ticker      `view:"-" desc:"update ticker"`
 }
 
@@ -115,11 +116,12 @@ func (gr *Grunt) StartAutoUpdt() {
 	gr.UpdtMu.Lock()
 	defer gr.UpdtMu.Unlock()
 
+	gr.Timeout = time.Now().Add(time.Duration(UpdateTimeoutSec) * time.Second)
+
 	if gr.UpdtTick == nil {
 		gr.UpdtTick = time.NewTicker(time.Duration(UpdateMSec) * time.Millisecond)
 		go gr.TickerUpdate()
 	}
-	gr.Timeout = time.Now().Add(time.Duration(UpdateTimeoutSec) * time.Second)
 }
 
 // InAutoUpdt returns true if currently doing AutoUpdt
@@ -137,9 +139,27 @@ func (gr *Grunt) TickerUpdate() {
 			gr.UpdateLocked()
 			gr.StatusMsg("updated: " + time.Now().Format("15:04:05"))
 		} else {
+			if gr.NextCmd != "" {
+				gr.UpdtMu.Unlock()
+				gr.RunNextCmd()
+				continue
+			}
 			gr.ToolBar.UpdateActions()
 		}
 		gr.UpdtMu.Unlock()
+	}
+}
+
+// RunNextCmd runs the NextCmd
+func (gr *Grunt) RunNextCmd() {
+	if gr.NextCmd == "" {
+		return
+	}
+	cmd := gr.NextCmd
+	gr.NextCmd = ""
+	switch cmd {
+	case "status":
+		gr.RunGruntUpdt("status", nil) // all jobs
 	}
 }
 
@@ -208,6 +228,8 @@ func (gr *Grunt) Submit(args, message string) {
 	argv = append(argv, message)
 	gr.RunGruntUpdt("submit", argv)
 	gr.ToolBar.UpdateActions()
+	gr.TabView.SelectTabByName("Pending")
+	gr.NextCmd = "status"
 }
 
 // Output shows output of selected job in Output tab
@@ -503,6 +525,13 @@ func (gr *Grunt) Config() *gi.Window {
 				}
 			})
 	})
+
+	tbar.AddSeparator("help")
+
+	tbar.AddAction(gi.ActOpts{Label: "README", Icon: "file-markdown", Tooltip: "Opens your browser on the README file that contains help info."}, win.This(),
+		func(recv, send ki.Ki, sig int64, data interface{}) {
+			gi.OpenURL("https://github.com/emer/grunt/blob/master/grunti/README.md")
+		})
 
 	vp.UpdateEndNoSig(updt)
 
