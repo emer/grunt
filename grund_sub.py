@@ -400,6 +400,7 @@ if os.path.isfile(grunt_jobs_shafn):
                 newproj_server()
             else:
                 call_grunter(grunt_cmd)
+                com_results = True # often for adding new results
     if com_jobs:            
         commit_jobs()
     if com_results:

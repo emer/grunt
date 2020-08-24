@@ -7,7 +7,6 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
@@ -42,11 +41,9 @@ const (
 // Grunt interfaces with grunt commands
 type Grunt struct {
 	StatMsg   string            `desc:"last status message"`
-	Pending   *etable.Table     `view:"-" desc:"jobs table"`
-	Running   *etable.Table     `view:"-" desc:"jobs table"`
+	Active    *etable.Table     `view:"-" desc:"jobs table"`
 	Done      *etable.Table     `view:"-" desc:"jobs table"`
-	PendView  *etview.TableView `view:"-" desc:"table view"`
-	RunView   *etview.TableView `view:"-" desc:"table view"`
+	ActView   *etview.TableView `view:"-" desc:"table view"`
 	DoneView  *etview.TableView `view:"-" desc:"table view"`
 	OutView   *giv.TextView     `view:"-" desc:"text view"`
 	OutBuf    *giv.TextBuf      `view:"-" desc:"text buf"`
@@ -69,22 +66,19 @@ var TheGrunt Grunt
 
 // New makes new tables
 func (gr *Grunt) New() {
-	gr.Pending = &etable.Table{}
-	gr.Running = &etable.Table{}
+	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
 }
 
 // OpenJobs opens existing job files
 func (gr *Grunt) OpenJobs() {
-	gr.Pending.OpenCSV("jobs.pending", etable.Comma)
-	gr.Running.OpenCSV("jobs.running", etable.Comma)
+	gr.Active.OpenCSV("jobs.active", etable.Comma)
 	gr.Done.OpenCSV("jobs.done", etable.Comma)
 }
 
 // UpdateViews updates the table views
 func (gr *Grunt) UpdateViews() {
-	gr.PendView.UpdateTable()
-	gr.RunView.UpdateTable()
+	gr.ActView.UpdateTable()
 	gr.DoneView.UpdateTable()
 }
 
@@ -228,8 +222,8 @@ func (gr *Grunt) Submit(args, message string) {
 	argv = append(argv, message)
 	gr.RunGruntUpdt("submit", argv)
 	gr.ToolBar.UpdateActions()
-	gr.TabView.SelectTabByName("Pending")
 	gr.NextCmd = "status"
+	gr.TabView.SelectTabByName("Active")
 }
 
 // Output shows output of selected job in Output tab
@@ -248,6 +242,21 @@ func (gr *Grunt) List() {
 		return
 	}
 	gr.RunGrunt("ls", jobs)
+}
+
+// Files gets specific files as listed (space separated) into results, for files that are
+// not automatically copied by grunter.py script
+func (gr *Grunt) Files(files string) {
+	jobs := gr.SelectedJobs(true) // need
+	if len(jobs) == 0 {
+		return
+	}
+	if len(jobs) != 1 {
+		gr.StatusMsg(`<span style="color:red">Error: Must have exactly 1 job selected, rest of args are file names!</span>`)
+		return
+	}
+	jobs = append(jobs, strings.Fields(files)...)
+	gr.RunGruntUpdt("results", jobs)
 }
 
 // Diff displays the diffs between either given job and current directory, or between two jobs dirs
@@ -309,6 +318,11 @@ func (gr *Grunt) Archive() {
 	gr.RunGruntUpdt("archive", jobs)
 }
 
+// MiscCmd runs a misc command that is passed through to grunter.py
+func (gr *Grunt) MiscCmd(cmd string) {
+	gr.RunGrunt(cmd, gr.SelectedJobs(true))
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //  Selected Jobs / Views
 
@@ -317,7 +331,7 @@ func (gr *Grunt) Archive() {
 func (gr *Grunt) SelectedJobs(need bool) []string {
 	avw := gr.ActiveView()
 	if avw == nil {
-		fmt.Printf("no views visible\n")
+		gr.StatusMsg("Could not get jobs -- no job views visible")
 		return nil
 	}
 	sel := avw.SelectedIdxsList(false) // ascending
@@ -339,10 +353,8 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 
 func (gr *Grunt) ActiveView() *etview.TableView {
 	switch {
-	case gr.PendView.IsVisible():
-		return gr.PendView
-	case gr.RunView.IsVisible():
-		return gr.RunView
+	case gr.ActView.IsVisible():
+		return gr.ActView
 	case gr.DoneView.IsVisible():
 		return gr.DoneView
 	}
@@ -411,13 +423,9 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.StatLabel.SetStretchMaxWidth()
 	gr.StatLabel.Redrawable = true
 
-	gr.PendView = tv.AddNewTab(etview.KiT_TableView, "Pending").(*etview.TableView)
-	gr.ConfigTableView(gr.PendView)
-	gr.PendView.SetTable(gr.Pending, nil)
-
-	gr.RunView = tv.AddNewTab(etview.KiT_TableView, "Running").(*etview.TableView)
-	gr.ConfigTableView(gr.RunView)
-	gr.RunView.SetTable(gr.Running, nil)
+	gr.ActView = tv.AddNewTab(etview.KiT_TableView, "Active").(*etview.TableView)
+	gr.ConfigTableView(gr.ActView)
+	gr.ActView.SetTable(gr.Active, nil)
 
 	gr.DoneView = tv.AddNewTab(etview.KiT_TableView, "Done").(*etview.TableView)
 	gr.ConfigTableView(gr.DoneView)
@@ -483,6 +491,10 @@ func (gr *Grunt) Config() *gi.Window {
 		tbar.UpdateActions()
 	})
 
+	tbar.AddAction(gi.ActOpts{Label: "Files", Icon: "file-download", Tooltip: "gets specific files as listed (space separated) into results, for files that are not automatically copied by grunter.py script -- use List to see list of files on server"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(gr, "Files", vp)
+	})
+
 	tbar.AddAction(gi.ActOpts{Label: "Diff", Icon: "file-text", Tooltip: "displays the diffs between either given job and current directory, or between two jobs dirs in Output tab"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Diff()
 		gr.ShowOutput()
@@ -492,6 +504,10 @@ func (gr *Grunt) Config() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Link", Icon: "folder", Tooltip: "make symbolic links into local gresults/jobid for job results -- this makes it easier to access the results -- this happens automatically in Results cmd"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Link()
 		tbar.UpdateActions()
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Misc", Icon: "run", Tooltip: "run a misc command that is supported by local grunter.py file"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		giv.CallMethod(gr, "MiscCmd", vp)
 	})
 
 	tbar.AddSeparator("del")
@@ -561,6 +577,22 @@ var GruntProps = ki.Props{
 				}},
 				{"Message", ki.Props{
 					"width": 80,
+				}},
+			},
+		}},
+		{"Files", ki.Props{
+			"desc": "gets specific files as listed (space separated) into results, for files that are not automatically copied by grunter.py script -- use List to see list of files on server",
+			"Args": ki.PropSlice{
+				{"Files", ki.Props{
+					"width": 80,
+				}},
+			},
+		}},
+		{"MiscCmd", ki.Props{
+			"desc": "This runs a custom command, supported in this project's grunter.py script.  Selected jobs will be passed as args, if any",
+			"Args": ki.PropSlice{
+				{"Command", ki.Props{
+					"width": 20,
 				}},
 			},
 		}},

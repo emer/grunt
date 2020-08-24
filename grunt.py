@@ -105,8 +105,7 @@ grunt_jobid = ""
 grunt_jobnum = 0
 
 # lists of different jobs -- updated with active_jobs_list at start
-jobs_pending = []
-jobs_running = []
+jobs_active = []
 jobs_done = []
 jobs_header =     ["$JobId", "$SlurmId", "$Status", "$SlurmStat", "$Submit", "$Start", "$End", "$Args", "$Message"]
 jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
@@ -359,7 +358,7 @@ def jobid_fm_jobs_list(lst):
     
 def active_jobs_list():
     # active_jobs_list generates lists of active jobs with statuses    
-    global jobs_pending, jobs_running, jobs_done
+    global jobs_active, jobs_done
     for jobid in os.listdir(grunt_active):
         if not jobid.startswith(grunt_userid):
             continue
@@ -385,14 +384,12 @@ def active_jobs_list():
             if os.path.isfile(jed):
                 jobs_done.append([jobid, slurmid, "Done", slurmstat, sub, st, ed, args, msg])
             else:
-                jobs_running.append([jobid, slurmid, "Running", slurmstat, sub, st, "", args, msg])
+                jobs_active.append([jobid, slurmid, "Running", slurmstat, sub, st, "", args, msg])
         else:
-            jobs_pending.append([jobid, "", "Pending", slurmstat, sub, st, ed, args, msg])
-    jobs_pending.sort(key=jobid_fm_jobs_list)
-    jobs_running.sort(key=jobid_fm_jobs_list)
+            jobs_active.append([jobid, "", "Pending", slurmstat, sub, st, ed, args, msg])
+    jobs_active.sort(key=jobid_fm_jobs_list)
     jobs_done.sort(key=jobid_fm_jobs_list)
-    write_csv("jobs.pending", jobs_header, jobs_pending) 
-    write_csv("jobs.running", jobs_header, jobs_running) 
+    write_csv("jobs.active", jobs_header, jobs_active) 
     write_csv("jobs.done", jobs_header, jobs_done) 
 
 def print_jobs(jobs_list, desc):
@@ -559,7 +556,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t do status to get latest job status from server, then jobs again in ~10 sec\n")
 
     print("status\t [jobid] pings the server to check status and update job status files")
-    print("\t on all running and pending jobs if no job specified -- use jobs to see results\n")
+    print("\t on all active (running and pending) jobs if no job specified -- use jobs to see results\n")
 
     print("results\t [jobid] [files..] push current job results to results git repository")
     print("\t with no files listed uses grunter.py results command on server for list.")
@@ -635,21 +632,16 @@ if (cmd == "submit"):
 elif (cmd == "jobs"):
     if len(sys.argv) < 3:
         print_jobs(jobs_done, "Done Jobs")
-        print_jobs(jobs_pending, "Pending Jobs")
-        print_jobs(jobs_running, "Running Jobs")
+        print_jobs(jobs_active, "Active Jobs")
     else:
         if sys.argv[2] == "done":
             print_jobs(jobs_done, "Done Jobs")
         else:
-            print_jobs(jobs_pending, "Pending Jobs")
-            print_jobs(jobs_running, "Running Jobs")
+            print_jobs(jobs_active, "Active Jobs")
 elif (cmd == "status"):
     # special support to use active jobs
     if len(sys.argv) == 2:
-        for jb in jobs_pending:
-            grunt_jobid = jb[0]
-            write_cmd(grunt_jobid, cmd, timestamp())
-        for jb in jobs_running:
+        for jb in jobs_active:
             grunt_jobid = jb[0]
             write_cmd(grunt_jobid, cmd, timestamp())
         commit_cmd(cmd)
@@ -716,11 +708,7 @@ elif (cmd == "unlink"):
 elif (cmd == "results"):
     pull_jobs_repo()
     if len(sys.argv) < 3:
-        for jb in jobs_pending:
-            grunt_jobid = jb[0]
-            write_cmd(grunt_jobid, cmd, timestamp())
-            link_results(grunt_jobid)
-        for jb in jobs_running:
+        for jb in jobs_active:
             grunt_jobid = jb[0]
             write_cmd(grunt_jobid, cmd, timestamp())
             link_results(grunt_jobid)

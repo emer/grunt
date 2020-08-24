@@ -178,7 +178,7 @@ jobs	 [active|done] shows lists of all jobs, or specific subset
 	 do status to get latest job status from server, then jobs again in ~10 sec
 
 status	 [jobid] pings the server to check status and update job status files
-	 on all running and pending jobs if no job specified -- use jobs to see results
+	 on all active (running and pending) jobs if no job specified -- use jobs to see results
 
 results	 [jobid] [files..] push current job results to results git repository
 	 with no files listed uses grunter.py results command on server for list.
@@ -195,7 +195,7 @@ diff	 <jobid1> [jobid2] displays the diffs between either given job and current
 	 directory, or between two jobs directories
 
 link	 <jobid..> make symbolic links into local gresults/jobid for job results
-	 this makes it easier to access the results -- this happens automatically at update
+	 this makes it easier to access the results -- this happens automatically in results cmd
 
 cancel	 <jobid..> cancel job on server
 
