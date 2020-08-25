@@ -45,6 +45,7 @@ const (
 // Grunt interfaces with grunt commands
 type Grunt struct {
 	StatMsg  string            `desc:"last status message"`
+	Params   Params            `desc:"params per project, saved as grunti.pars"`
 	ResList  Results           `desc:"list of loaded results"`
 	Active   *etable.Table     `desc:"jobs table"`
 	Done     *etable.Table     `desc:"jobs table"`
@@ -75,6 +76,7 @@ var TheGrunt Grunt
 
 // New makes new tables
 func (gr *Grunt) New() {
+	gr.Params.Open()
 	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
 	gr.ResList = make(Results, 0)
@@ -285,6 +287,14 @@ func (gr *Grunt) PlotResults() {
 		}
 		gr.Plot.Params.LegendCol = "JobId"
 		gr.Plot.SetTable(gr.AggRes)
+	}
+	if gr.Plot.Params.XAxisCol == "" {
+		gr.Plot.Params.XAxisCol = gr.Params.XAxis
+	}
+	for _, cp := range gr.Plot.Cols {
+		if cp.Col != gr.Plot.Params.XAxisCol {
+			cp.Range = gr.Params.DefRange
+		}
 	}
 	gr.TabView.SelectTabByName("Plot")
 	gr.Plot.Update()
@@ -515,6 +525,11 @@ func (gr *Grunt) Config() *gi.Window {
 	tb.Stat() // update markup
 	gr.OutBuf = tb
 
+	prv := tv.AddNewTab(giv.KiT_StructView, "Params").(*giv.StructView)
+	prv.SetStretchMax()
+	prv.Viewport = vp
+	prv.SetStruct(&gr.Params)
+
 	tlv := tv.AddNewTab(gi.KiT_Layout, "Output").(*gi.Layout)
 	tlv.SetStretchMax()
 	txv := giv.AddNewTextView(tlv, "text-view")
@@ -533,6 +548,7 @@ func (gr *Grunt) Config() *gi.Window {
 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "Plot").(*eplot.Plot2D)
 	plt.SetStretchMax()
 	gr.Plot = plt
+	gr.Plot.Params.XAxisCol = gr.Params.XAxis
 
 	// toolbar
 
