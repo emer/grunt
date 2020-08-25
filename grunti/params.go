@@ -16,6 +16,7 @@ import (
 
 // Params are localized settings for each project
 type Params struct {
+	Args     string         `desc:"default Args for Submit"`
 	XAxis    string         `desc:"default XAxis name for plots"`
 	DefRange minmax.Range64 `desc:"default Range params for plot columns"`
 }

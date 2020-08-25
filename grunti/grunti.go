@@ -303,6 +303,10 @@ func (gr *Grunt) PlotResults() {
 // Submit submits a new job, with optional space-separated args and a message
 // describing the job
 func (gr *Grunt) Submit(args, message string) {
+	if gr.Params.Args == "" && args != "" {
+		gr.Params.Args = args
+		gr.Params.Save()
+	}
 	argv := strings.Fields(args)
 	argv = append(argv, "-m")
 	argv = append(argv, message)
@@ -698,7 +702,8 @@ var GruntProps = ki.Props{
 			"desc": "Specify additional args, space separated, and a message describing this job (key params, etc)",
 			"Args": ki.PropSlice{
 				{"Args", ki.Props{
-					"width": 80,
+					"default-field": "Params.Args",
+					"width":         80,
 				}},
 				{"Message", ki.Props{
 					"width": 80,
