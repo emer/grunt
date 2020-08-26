@@ -105,7 +105,8 @@ func (gr *Grunt) UpdateLocked() {
 		return
 	}
 	gr.RunGruntCmd("jobs", nil)
-	gr.RunGruntCmd("pull", nil)
+	out, _ := gr.RunGruntCmd("pull", nil)
+	gr.OutBuf.SetText(out)
 
 	gr.OpenJobs()
 	gr.UpdateViews()
@@ -231,6 +232,7 @@ func (gr *Grunt) Results() {
 	} else {
 		gr.RunGruntUpdt("results", gr.SelectedJobs(false))
 	}
+	gr.TabView.SelectTabByName("Output") // see grunt output
 }
 
 // OpenResults opens results for selected jobs, for file name that contains given string,
@@ -352,7 +354,8 @@ func (gr *Grunt) Files(files string) {
 		return
 	}
 	jobs = append(jobs, strings.Fields(files)...)
-	gr.RunGruntUpdt("results", jobs)
+	gr.RunGruntUpdt("files", jobs)
+	gr.TabView.SelectTabByName("Output") // see grunt output
 }
 
 // Diff displays the diffs between either given job and current directory, or between two jobs dirs

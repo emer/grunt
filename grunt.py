@@ -16,6 +16,8 @@ from pathlib import Path
 import getpass
 from datetime import datetime, timezone
 import csv
+import logging
+logging.basicConfig(level=logging.INFO)
 
 def open_servername(fnm):
     global grunt_server
@@ -150,6 +152,7 @@ def pull_results_repo():
         print("The directory is not a valid grunt results git working directory: " + grunt_results + "! " + str(e))
         exit(3)
     # print(grunt_results_repo)
+    type(grunt_results_repo.git).GIT_PYTHON_TRACE='full' # get full info on what is pulled
     try:
         grunt_results_repo.remotes.origin.pull()
     except git.exc.GitCommandError as e:
@@ -558,9 +561,12 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("status\t [jobid] pings the server to check status and update job status files")
     print("\t on all active (running and pending) jobs if no job specified -- use jobs to see results\n")
 
-    print("results\t [jobid] [files..] push current job results to results git repository")
-    print("\t with no files listed uses grunter.py results command on server for list.")
+    print("results\t <jobid..> push current job results to results git repository")
+    print("\t the specific files to get are returned by the result() function in grunter.py")
     print("\t with no jobid it gets results on all running jobs.")
+    print("\t automatically does link on jobs to make easy to access from orig source.\n")
+
+    print("files\t jobid [files..] push given files for given job to results git repository")
     print("\t automatically does link on jobs to make easy to access from orig source.\n")
 
     print("pull\t grab any updates to jobs and results repos (done for any cmd)\n")
@@ -720,16 +726,19 @@ elif (cmd == "results"):
                 write_cmd(grunt_jobid, cmd, timestamp())
                 link_results(grunt_jobid)
         commit_cmd(cmd)
-    elif len(sys.argv) == 3:
+    else:
         job_args = glob_job_args(sys.argv[2:], grunt_active)
         for jb in job_args:
             grunt_jobid = jb
-            write_commit_cmd(grunt_jobid, cmd, timestamp())
-            link_results(grunt_jobid)
-    else: # jobs, files
-        grunt_jobid = sys.argv[2]
-        write_commit_cmd(grunt_jobid, cmd, argslist())
-        link_results(grunt_jobid)
+            write_cmd(grunt_jobid, cmd, timestamp())
+elif (cmd == "files"):
+    pull_jobs_repo()
+    if len(sys.argv) < 4:
+        print(cmd + " requires job and files.. args")
+        exit(1)
+    grunt_jobid = sys.argv[2]
+    write_commit_cmd(grunt_jobid, "results", argslist())
+    link_results(grunt_jobid)
 elif (cmd == "newproj"):
     if len(sys.argv) < 3:
         print("newproj command requires name of project")

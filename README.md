@@ -2,7 +2,9 @@
 
 `grunt` is a git-based run tool, which provides a general-purpose distributed file system with version control (i.e., git) with the infrastructure to run commands on a remote machine, by pushing files to a git repository, and having the remote machine running the daemon (`grund`) polling for updates and running the commands.
 
-The remote machine (e.g., a compute server) hosts the git repository, which is accessed via ssh, and everything is done in user-space, so no root access is required anywhere. Everything is written in python3.
+The remote machine (e.g., a compute server) hosts the git repository, which is accessed via ssh, and everything is done in user-space, so no root access is required anywhere. The core tools are written in python3.
+
+See `grunti` directory for a GUI interface written in Go, which makes usage considerably simpler than the command line.
 
 The central principles are:
 
@@ -180,9 +182,12 @@ jobs	 [active|done] shows lists of all jobs, or specific subset
 status	 [jobid] pings the server to check status and update job status files
 	 on all active (running and pending) jobs if no job specified -- use jobs to see results
 
-results	 [jobid] [files..] push current job results to results git repository
-	 with no files listed uses grunter.py results command on server for list.
+results	 <jobid..> push current job results to results git repository
+	 the specific files to get are returned by the result() function in grunter.py
 	 with no jobid it gets results on all running jobs.
+	 automatically does link on jobs to make easy to access from orig source.
+
+files	 jobid [files..] push given files for given job to results git repository
 	 automatically does link on jobs to make easy to access from orig source.
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
