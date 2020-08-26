@@ -50,13 +50,32 @@ type Results []*Result
 
 var KiT_Results = kit.Types.AddType(&Results{}, ResultsProps)
 
-// Add adds given file path to CSV (TSV) data to results
-func (rs *Results) Add(jobid, fpath string) *Result {
-	r := &Result{JobId: jobid, Path: fpath}
+// Add adds given job and file path to CSV (TSV) data to results.
+func (rs *Results) Add(jobid, path string) *Result {
+	r := &Result{JobId: jobid, Path: path}
 	r.Table = &etable.Table{}
 	r.OpenCSV()
 	*rs = append(*rs, r)
 	return r
+}
+
+// Recycle returns existing Result, or adds if not.
+func (rs *Results) Recycle(jobid, path string) *Result {
+	r := rs.FindJobPath(jobid, path)
+	if r != nil {
+		return r
+	}
+	return rs.Add(jobid, path)
+}
+
+// FindJobPath finds a result for given job and path -- returns nil if not found
+func (rs *Results) FindJobPath(jobid, path string) *Result {
+	for _, r := range *rs {
+		if r.JobId == jobid && r.Path == path {
+			return r
+		}
+	}
+	return nil
 }
 
 // Reload reloads all the data for any results with Use set

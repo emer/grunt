@@ -37,11 +37,6 @@ func guirun() {
 	win.StartEventLoop()
 }
 
-const (
-	UpdateMSec       = 5000 // can't do much faster than this..
-	UpdateTimeoutSec = 30
-)
-
 // Grunt interfaces with grunt commands
 type Grunt struct {
 	StatMsg  string            `desc:"last status message"`
@@ -76,6 +71,7 @@ var TheGrunt Grunt
 
 // New makes new tables
 func (gr *Grunt) New() {
+	gr.Params.Defaults()
 	gr.Params.Open()
 	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
@@ -123,10 +119,10 @@ func (gr *Grunt) StartAutoUpdt() {
 	gr.UpdtMu.Lock()
 	defer gr.UpdtMu.Unlock()
 
-	gr.Timeout = time.Now().Add(time.Duration(UpdateTimeoutSec) * time.Second)
+	gr.Timeout = time.Now().Add(time.Duration(gr.Params.UpdtTotalSec) * time.Second)
 
 	if gr.UpdtTick == nil {
-		gr.UpdtTick = time.NewTicker(time.Duration(UpdateMSec) * time.Millisecond)
+		gr.UpdtTick = time.NewTicker(time.Duration(gr.Params.UpdtIntervalSec) * time.Second)
 		go gr.TickerUpdate()
 	}
 }
@@ -219,17 +215,28 @@ func (gr *Grunt) RunGruntUpdt(grcmd string, args []string) ([]byte, error) {
 
 // Status pings server for current job status
 func (gr *Grunt) Status() {
-	gr.RunGruntUpdt("status", gr.SelectedJobs(false))
+	av := gr.ActiveView()
+	if av == gr.ActView || av == nil {
+		gr.RunGruntUpdt("status", nil)
+	} else {
+		gr.RunGruntUpdt("status", gr.SelectedJobs(false))
+	}
 }
 
 // Results pings server for current job results
 func (gr *Grunt) Results() {
-	gr.RunGruntUpdt("results", gr.SelectedJobs(false))
+	av := gr.ActiveView()
+	if av == gr.ActView || av == nil {
+		gr.RunGruntUpdt("results", nil)
+	} else {
+		gr.RunGruntUpdt("results", gr.SelectedJobs(false))
+	}
 }
 
 // OpenResults opens results for selected jobs, for file name that contains given string,
 // and has given extension (csv = comma separated, tsv = tab separated)
 func (gr *Grunt) OpenResults(fileContains, ext string) {
+	gr.Params.SaveOpenResultsCont(fileContains)
 	jobs := gr.SelectedJobs(true) // need
 	if len(jobs) == 0 {
 		return
@@ -242,7 +249,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 				if len(gr.ResList) == 1 && gr.ResList[0].JobId == "" { // remove blank
 					gr.ResList = gr.ResList[:0]
 				}
-				gr.ResList.Add(jb, filepath.Join(fnm, fl))
+				gr.ResList.Recycle(jb, filepath.Join(fnm, fl))
 			}
 		}
 	}
@@ -254,6 +261,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 // if multiple selected, they are merged into a single table and plotted by JobId
 func (gr *Grunt) PlotResults() {
 	sel := gr.ResView.SelectedIdxsList(false)
+	fmt.Printf("sel: %v\n", sel)
 	if len(sel) == 0 {
 		if len(gr.ResList) == 0 {
 			gr.StatusMsg("Plot: no results to plot")
@@ -269,6 +277,7 @@ func (gr *Grunt) PlotResults() {
 			gr.StatusMsg("Plot: nil table")
 			return
 		}
+		gr.Plot.Params.LegendCol = ""
 		gr.Plot.SetTable(dt)
 	} else {
 		gr.AggRes = nil // reset
@@ -303,10 +312,7 @@ func (gr *Grunt) PlotResults() {
 // Submit submits a new job, with optional space-separated args and a message
 // describing the job
 func (gr *Grunt) Submit(args, message string) {
-	if gr.Params.Args == "" && args != "" {
-		gr.Params.Args = args
-		gr.Params.Save()
-	}
+	gr.Params.SaveSubmitArgs(args)
 	argv := strings.Fields(args)
 	argv = append(argv, "-m")
 	argv = append(argv, message)
@@ -563,14 +569,14 @@ func (gr *Grunt) Config() *gi.Window {
 		tbar.UpdateActions()
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Status", Icon: "file-exe", Tooltip: "ping server for updated status of selected jobs or running jobs if none selected"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Status", Icon: "file-exe", Tooltip: "ping server for updated status of all Active jobs (regardless of current selection), or selected jobs if Done tab is selected"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Status()
 		tbar.UpdateActions()
 	})
 
 	tbar.AddSeparator("res-sep")
 
-	tbar.AddAction(gi.ActOpts{Label: "Results", Icon: "file-upload", Tooltip: "tell server to commit latest results from selected jobs or running jobs if none selected"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Results", Icon: "file-upload", Tooltip: "tell server to commit latest results from all Active jobs (regardless of current selection), or selected jobs if Done tab selected"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Results()
 		tbar.UpdateActions()
 	})
@@ -579,7 +585,7 @@ func (gr *Grunt) Config() *gi.Window {
 		giv.CallMethod(gr, "OpenResults", vp)
 	})
 
-	tbar.AddAction(gi.ActOpts{Label: "Plot", Icon: "image", Tooltip: "plot selected (or all if none selected) opened Results -- if multiple selected, they are merged into a single table and plotted by JobId"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+	tbar.AddAction(gi.ActOpts{Label: "Plot", Icon: "image", Tooltip: "plot selected (or all if none selected) opened Results in Results tab -- if multiple selected, they are merged into a single table and plotted by JobId"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.PlotResults()
 	})
 
@@ -690,7 +696,8 @@ var GruntProps = ki.Props{
 			"desc": "opens results for selected jobs, for file name that contains given string, and has given extension (e.g., .csv = comma separated, .tsv = tab separated)",
 			"Args": ki.PropSlice{
 				{"Filename Contains", ki.Props{
-					"width": 60,
+					"width":         60,
+					"default-field": "Params.OpenResultsCont",
 				}},
 				{"Ext", ki.Props{
 					"default": ".tsv",
@@ -702,7 +709,7 @@ var GruntProps = ki.Props{
 			"desc": "Specify additional args, space separated, and a message describing this job (key params, etc)",
 			"Args": ki.PropSlice{
 				{"Args", ki.Props{
-					"default-field": "Params.Args",
+					"default-field": "Params.SubmitArgs",
 					"width":         80,
 				}},
 				{"Message", ki.Props{
