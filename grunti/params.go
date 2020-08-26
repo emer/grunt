@@ -27,7 +27,7 @@ type Params struct {
 var KiT_Params = kit.Types.AddType(&Params{}, ParamsProps)
 
 func (pr *Params) Defaults() {
-	pr.UpdtTotalSec = 15
+	pr.UpdtTotalSec = 20
 	pr.UpdtIntervalSec = 5
 	pr.DefRange.FixMin = true
 	pr.DefRange.FixMax = true
