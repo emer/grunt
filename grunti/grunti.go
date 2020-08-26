@@ -442,8 +442,15 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 		return nil
 	}
 	jobs := make([]string, ns)
+	ilen := avw.Table.Idxs.Len()
 	for i, si := range sel {
+		if si >= ilen {
+			continue
+		}
 		row := avw.Table.Idxs[si]
+		if !avw.Table.Table.IsValidRow(row) {
+			continue
+		}
 		jb := avw.Table.Table.CellString("JobId", row)
 		jobs[i] = jb
 	}
