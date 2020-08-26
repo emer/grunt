@@ -285,7 +285,7 @@ func (gr *Grunt) PlotResults() {
 		gr.AggRes = nil // reset
 		for i := range sel {
 			r := gr.ResList[sel[i]]
-			fmt.Printf("job: %d  %s\n", i, r.JobId)
+			// fmt.Printf("job: %d  %s\n", i, r.JobId)
 			dt := r.TableWithJobId()
 			if dt == nil {
 				continue
@@ -555,6 +555,9 @@ func (gr *Grunt) Config() *gi.Window {
 	rsv := tv.AddNewTab(giv.KiT_TableView, "Results").(*giv.TableView)
 	rsv.SetStretchMax()
 	rsv.Viewport = vp
+	rsv.SetInactive()
+	rsv.SetProp("inactive", true)
+	rsv.InactMultiSel = true
 	rsv.SetSlice(&gr.ResList)
 	gr.ResView = rsv
 

@@ -16,8 +16,6 @@ from pathlib import Path
 import getpass
 from datetime import datetime, timezone
 import csv
-import logging
-logging.basicConfig(level=logging.INFO)
 
 def open_servername(fnm):
     global grunt_server
@@ -152,11 +150,15 @@ def pull_results_repo():
         print("The directory is not a valid grunt results git working directory: " + grunt_results + "! " + str(e))
         exit(3)
     # print(grunt_results_repo)
-    type(grunt_results_repo.git).GIT_PYTHON_TRACE='full' # get full info on what is pulled
     try:
         grunt_results_repo.remotes.origin.pull()
     except git.exc.GitCommandError as e:
         print("Could not execute a git pull on results repository " + grunt_results + str(e))
+        
+    glog = grunt_results_repo.head.reference.log()
+    ts = timestamp_local(datetime.fromtimestamp(glog[-1].time[0], timezone.utc))
+    print("From pull   at: " + timestamp_local(datetime.now(timezone.utc)))    
+    print("Last commit at: " + ts)
 
 def copy_to_jobs(new_job):
     # copies current git-controlled files to new_job dir in jobs wc
