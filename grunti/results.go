@@ -16,8 +16,8 @@ import (
 
 // Result has info for one loaded result, in form of an etable.Table
 type Result struct {
-	JobId string        `desc:"job id for results"`
-	Path  string        `width:"60" desc:"path to data"`
+	JobId string        `inactive:"+" desc:"job id for results"`
+	Path  string        `inactive:"+" width:"60" desc:"path to data"`
 	Table *etable.Table `desc:"result data"`
 }
 
@@ -63,6 +63,7 @@ func (rs *Results) Add(jobid, path string) *Result {
 func (rs *Results) Recycle(jobid, path string) *Result {
 	r := rs.FindJobPath(jobid, path)
 	if r != nil {
+		r.OpenCSV()
 		return r
 	}
 	return rs.Add(jobid, path)
@@ -85,11 +86,20 @@ func (rs *Results) Reload() {
 	}
 }
 
+// Reset resets all loaded data
+func (rs *Results) Reset() {
+	*rs = make(Results, 0)
+}
+
 var ResultsProps = ki.Props{
 	"ToolBar": ki.PropSlice{
 		{"Reload", ki.Props{
 			"desc": "reload all data from files",
 			"icon": "update",
+		}},
+		{"Reset", ki.Props{
+			"desc": "reset all data -- use Open... to open new ones",
+			"icon": "minus",
 		}},
 	},
 }

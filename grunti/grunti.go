@@ -7,7 +7,6 @@
 package main
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -263,7 +262,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 // if multiple selected, they are merged into a single table and plotted by JobId
 func (gr *Grunt) PlotResults() {
 	sel := gr.ResView.SelectedIdxsList(false)
-	fmt.Printf("sel: %v\n", sel)
+	// fmt.Printf("sel: %v\n", sel)
 	if len(sel) == 0 {
 		if len(gr.ResList) == 0 {
 			gr.StatusMsg("Plot: no results to plot")
@@ -562,9 +561,6 @@ func (gr *Grunt) Config() *gi.Window {
 	rsv := tv.AddNewTab(giv.KiT_TableView, "Results").(*giv.TableView)
 	rsv.SetStretchMax()
 	rsv.Viewport = vp
-	rsv.SetInactive()
-	rsv.SetProp("inactive", true)
-	rsv.InactMultiSel = true
 	rsv.SetSlice(&gr.ResList)
 	gr.ResView = rsv
 
@@ -609,8 +605,13 @@ func (gr *Grunt) Config() *gi.Window {
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Cancel", Icon: "cancel", Tooltip: "cancel selected jobs"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		gr.Cancel()
-		tbar.UpdateActions()
+		gi.PromptDialog(vp, gi.DlgOpts{Title: "Cancel: Confirm", Prompt: "Are you <i>sure</i> you want to cancel job(s)?"}, gi.AddOk, gi.AddCancel,
+			vp.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+				if sig == int64(gi.DialogAccepted) {
+					gr.Cancel()
+					tbar.UpdateActions()
+				}
+			})
 	})
 
 	tbar.AddSeparator("file-sep")
