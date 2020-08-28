@@ -21,6 +21,7 @@ type Params struct {
 	UpdtTotalSec    int            `desc:"total number of seconds for auto-update after each action"`
 	UpdtIntervalSec int            `desc:"number of seconds to wait between auto-updates"`
 	SubmitArgs      string         `desc:"default Args for Submit -- is auto-updated and saved for each submit"`
+	SubmitMsg       string         `desc:"last message for Submit -- is auto-updated and saved for each submit"`
 	OpenResultsCont string         `desc:"default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open..."`
 }
 
@@ -35,11 +36,12 @@ func (pr *Params) Defaults() {
 }
 
 // SaveSubmitArgs saves the current
-func (pr *Params) SaveSubmitArgs(args string) {
-	if args == "" {
+func (pr *Params) SaveSubmitArgs(args, msg string) {
+	if args == "" && msg == "" {
 		return
 	}
 	pr.SubmitArgs = args
+	pr.SubmitMsg = msg
 	pr.Save()
 }
 
