@@ -16,9 +16,10 @@ import (
 
 // Result has info for one loaded result, in form of an etable.Table
 type Result struct {
-	JobId string        `inactive:"+" desc:"job id for results"`
-	Path  string        `inactive:"+" width:"60" desc:"path to data"`
-	Table *etable.Table `desc:"result data"`
+	JobId   string        `inactive:"+" desc:"job id for results"`
+	Message string        `inactive:"+" width:"80" desc:"description of job"`
+	Path    string        `inactive:"+" width:"60" desc:"path to data"`
+	Table   *etable.Table `desc:"result data"`
 }
 
 // OpenCSV opens data of generic CSV format (any delim, auto-detected)
@@ -51,8 +52,8 @@ type Results []*Result
 var KiT_Results = kit.Types.AddType(&Results{}, ResultsProps)
 
 // Add adds given job and file path to CSV (TSV) data to results.
-func (rs *Results) Add(jobid, path string) *Result {
-	r := &Result{JobId: jobid, Path: path}
+func (rs *Results) Add(jobid, path, msg string) *Result {
+	r := &Result{JobId: jobid, Path: path, Message: msg}
 	r.Table = &etable.Table{}
 	r.OpenCSV()
 	*rs = append(*rs, r)
@@ -60,13 +61,13 @@ func (rs *Results) Add(jobid, path string) *Result {
 }
 
 // Recycle returns existing Result, or adds if not.
-func (rs *Results) Recycle(jobid, path string) *Result {
+func (rs *Results) Recycle(jobid, path, msg string) *Result {
 	r := rs.FindJobPath(jobid, path)
 	if r != nil {
 		r.OpenCSV()
 		return r
 	}
-	return rs.Add(jobid, path)
+	return rs.Add(jobid, path, msg)
 }
 
 // FindJobPath finds a result for given job and path -- returns nil if not found

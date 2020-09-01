@@ -74,8 +74,15 @@ func (gr *Grunt) New() {
 	gr.Params.Open()
 	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
+	gr.ConfigJobTable(gr.Active)
+	gr.ConfigJobTable(gr.Done)
 	gr.ResList = make(Results, 0)
 	gr.ResList = append(gr.ResList, &Result{}) // dummy
+}
+
+// ConfigJobTable
+func (gr *Grunt) ConfigJobTable(dt *etable.Table) {
+	dt.SetMetaData("Message:width", "80")
 }
 
 // OpenJobs opens existing job files
@@ -242,7 +249,14 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 	if len(jobs) == 0 {
 		return
 	}
+	avw := gr.ActiveView()
+	jtab := avw.Table.Table
 	for _, jb := range jobs {
+		jrow := jtab.RowsByString("JobId", jb, etable.Equals, etable.UseCase)
+		msg := ""
+		if len(jrow) == 1 {
+			msg = jtab.CellString("Message", jrow[0])
+		}
 		fnm := filepath.Join("gresults", jb)
 		fls := dirs.ExtFileNames(fnm, []string{ext})
 		for _, fl := range fls {
@@ -250,7 +264,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 				if len(gr.ResList) == 1 && gr.ResList[0].JobId == "" { // remove blank
 					gr.ResList = gr.ResList[:0]
 				}
-				gr.ResList.Recycle(jb, filepath.Join(fnm, fl))
+				gr.ResList.Recycle(jb, filepath.Join(fnm, fl), msg)
 			}
 		}
 	}
@@ -727,8 +741,8 @@ var GruntProps = ki.Props{
 					"width":         80,
 				}},
 				{"Message", ki.Props{
-					"width":         80,
 					"default-field": "Params.SubmitMsg",
+					"width":         80,
 				}},
 			},
 		}},
