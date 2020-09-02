@@ -441,6 +441,9 @@ func (gr *Grunt) MiscCmd(cmd string) {
 // SelectedJobs returns the currently-selected list of jobs
 // if need is true, an error message is pushed to status about jobs being required
 func (gr *Grunt) SelectedJobs(need bool) []string {
+	if gr.ResView.IsVisible() {
+		return gr.SelectedJobsResults(need)
+	}
 	avw := gr.ActiveView()
 	if avw == nil {
 		gr.StatusMsg("Could not get jobs -- no job views visible")
@@ -465,6 +468,30 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 			continue
 		}
 		jb := avw.Table.Table.CellString("JobId", row)
+		jobs[i] = jb
+	}
+	return jobs
+}
+
+// SelectedJobsResults returns the currently-selected list of jobs
+// from results tab.
+// if need is true, an error message is pushed to status about jobs being required
+func (gr *Grunt) SelectedJobsResults(need bool) []string {
+	sel := gr.ResView.SelectedIdxsList(false) // ascending
+	ns := len(sel)
+	if ns == 0 {
+		if need {
+			gr.StatusMsg(`<span style="color:red">Error: job(s) must be selected for this action!</span>`)
+		}
+		return nil
+	}
+	jobs := make([]string, ns)
+	ilen := len(gr.ResList)
+	for i, si := range sel {
+		if si >= ilen {
+			continue
+		}
+		jb := gr.ResList[si].JobId
 		jobs[i] = jb
 	}
 	return jobs
@@ -551,17 +578,17 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.ConfigTableView(gr.DoneView)
 	gr.DoneView.SetTable(gr.Done, nil)
 
+	prv := tv.AddNewTab(giv.KiT_StructView, "Params").(*giv.StructView)
+	prv.SetStretchMax()
+	prv.Viewport = vp
+	prv.SetStruct(&gr.Params)
+
 	tb := &giv.TextBuf{}
 	tb.InitName(tb, "out-buf")
 	tb.Hi.Style = gi.Prefs.Colors.HiStyle
 	tb.Opts.LineNos = false
 	tb.Stat() // update markup
 	gr.OutBuf = tb
-
-	prv := tv.AddNewTab(giv.KiT_StructView, "Params").(*giv.StructView)
-	prv.SetStretchMax()
-	prv.Viewport = vp
-	prv.SetStruct(&gr.Params)
 
 	tlv := tv.AddNewTab(gi.KiT_Layout, "Output").(*gi.Layout)
 	tlv.SetStretchMax()

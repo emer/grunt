@@ -159,6 +159,9 @@ def write_sbatch():
     f.close()
     
 def submit():
+    if os.path.isfile('job.sbatch'):
+        print("Error: job.sbatch exists -- attempt to submit job twice!")
+        return
     write_sbatch()
     try:
         result = subprocess.check_output(["sbatch","job.sbatch"])

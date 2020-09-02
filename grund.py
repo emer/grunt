@@ -109,6 +109,9 @@ while True:
     for f in os.listdir(grunt_wc):
         grunt_proj = os.path.join(grunt_wc,f)
         if os.path.isdir(grunt_proj):
-            subprocess.call(["python3","./grund_sub.py", grunt_proj])
+            try:
+                subprocess.call(["python3","./grund_sub.py", grunt_proj])
+            except subprocess.SubprocessError as e:
+                print("grund_sub results error: " + str(e), flush=True)
     time.sleep(10)
     
