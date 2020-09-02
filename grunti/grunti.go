@@ -605,6 +605,19 @@ func (gr *Grunt) Config() *gi.Window {
 	rsv.SetSlice(&gr.ResList)
 	gr.ResView = rsv
 
+	rsv.WidgetSig.ConnectOnly(tv.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		if sig != int64(gi.WidgetSelected) {
+			return
+		}
+		sels := gr.SelectedJobs(false)
+		if len(sels) == 0 {
+			gr.StatusMsg("no jobs selected")
+		} else {
+			seltxt := strings.Join(sels, " ")
+			gr.StatusMsg("jobs selected: " + seltxt)
+		}
+	})
+
 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "Plot").(*eplot.Plot2D)
 	plt.SetStretchMax()
 	gr.Plot = plt
@@ -646,7 +659,9 @@ func (gr *Grunt) Config() *gi.Window {
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Cancel", Icon: "cancel", Tooltip: "cancel selected jobs"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		gi.PromptDialog(vp, gi.DlgOpts{Title: "Cancel: Confirm", Prompt: "Are you <i>sure</i> you want to cancel job(s)?"}, gi.AddOk, gi.AddCancel,
+		sels := gr.SelectedJobs(false)
+		seltxt := strings.Join(sels, " ")
+		gi.PromptDialog(vp, gi.DlgOpts{Title: "Cancel: Confirm", Prompt: "Are you <i>sure</i> you want to cancel these job(s): " + seltxt}, gi.AddOk, gi.AddCancel,
 			vp.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 				if sig == int64(gi.DialogAccepted) {
 					gr.Cancel()
