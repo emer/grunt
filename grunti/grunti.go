@@ -381,6 +381,12 @@ func (gr *Grunt) Diff() {
 	gr.RunGrunt("diff", jobs)
 }
 
+// Queue displays job queue information from the server
+// in Output tab
+func (gr *Grunt) Queue() {
+	gr.RunGrunt("queue", nil)
+}
+
 // Link make symbolic links into local gresults/jobid for job results
 // this makes it easier to access the results -- this happens automatically in results cmd
 func (gr *Grunt) Link() {
@@ -701,6 +707,12 @@ func (gr *Grunt) Config() *gi.Window {
 
 	tbar.AddAction(gi.ActOpts{Label: "Misc", Icon: "run", Tooltip: "run a misc command that is supported by local grunter.py file"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		giv.CallMethod(gr, "MiscCmd", vp)
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Queue", Icon: "info", Tooltip: "gets job queue information from the server -- queue command in grunter.py"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gr.ShowOutput()
+		gr.Queue()
+		tbar.UpdateActions()
 	})
 
 	tbar.AddSeparator("del-sep")

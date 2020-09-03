@@ -6,6 +6,7 @@
 
 import sys
 import os
+import time
 from git import Repo
 from distutils.dir_util import copy_tree
 import subprocess
@@ -181,6 +182,13 @@ def copy_to_jobs(new_job):
         shutil.copyfile(f, jf)
         grunt_jobs_repo.git.add(jf)
 
+def copy_grunter_to_jobs(jobid):
+    # copies grunter to jobs
+    f = "grunter.py"
+    jf = os.path.join(grunt_active, jobid, grunt_proj, f)
+    shutil.copyfile(f, jf)
+    grunt_jobs_repo.git.add(jf)
+
 def print_job_out(jobid):
     job_out = os.path.join(grunt_active, jobid, grunt_proj, "job.out")
     print("\njob.out: " + job_out + "\n")
@@ -249,6 +257,7 @@ def unlink_results(jobid):
         print("\nunlinked: " + dst + "\n")
         
 def write_cmd(jobid, cmd, cmdstr):
+    copy_grunter_to_jobs(jobid)
     job_dir = os.path.join(grunt_active, jobid, grunt_proj)
     cmdfn = os.path.join(job_dir, "grcmd." + cmd)
     with open(cmdfn,"w") as f:
@@ -270,6 +279,14 @@ def write_csv(fnm, header, data):
         csvwriter.writerow(header) 
         csvwriter.writerows(data)
 
+def print_job_file(jobid, jobfile):
+    job_dir = os.path.join(grunt_active, jobid, grunt_proj)
+    fn = os.path.join(job_dir, jobfile)
+    fc = read_strings_strip(fn)
+    print("job: " + jobid + " file: " + fn)
+    for r in fc:
+        print(r)
+    
 def read_csv(fnm, header):
     # reads list data from file -- if header is True then discards first row as header
     data = []
@@ -594,6 +611,8 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("archive\t <jobid..> moves job directory from active to archive subdir")
     print("\t useful for removing clutter from active, and preserving important but non-current results\n")
 
+    print("queue\t calls queue command in grunter.py, prints resulting job.queue file\n")
+    
     print("newproj\t <projname> [remote-url] creates new project repositories -- for use on both server")
     print("\t and client -- on client you should specify the remote-url arg which should be:")
     print("\t just your username and server name on server: username@server.my.university.edu\n")
@@ -741,15 +760,13 @@ elif (cmd == "files"):
     grunt_jobid = sys.argv[2]
     write_commit_cmd(grunt_jobid, "results", argslist())
     link_results(grunt_jobid)
-elif (cmd == "newproj"):
-    if len(sys.argv) < 3:
-        print("newproj command requires name of project")
-        exit(1)
-    projnm = sys.argv[2]
-    remote = ""
-    if len(sys.argv) == 4:
-        remote = sys.argv[3]
-    init_repos(projnm, remote)
+elif (cmd == "queue"):
+    grunt_jobid = jobs_active[0][0]
+    write_commit_cmd(grunt_jobid, "queue", timestamp())
+    print("waiting for results...")
+    time.sleep(10)
+    pull_jobs_repo()
+    print_job_file(grunt_jobid, "job.queue")
 elif (cmd == "newproj-server"):
     if len(sys.argv) < 3:
         print("newproj command requires name of project")

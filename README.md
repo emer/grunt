@@ -213,6 +213,8 @@ delete	 <jobid..> moves job directory from active to delete subdir, deletes resu
 archive	 <jobid..> moves job directory from active to archive subdir
 	 useful for removing clutter from active, and preserving important but non-current results
 
+queue	 calls queue command in grunter.py, prints resulting job.queue file
+
 newproj	 <projname> [remote-url] creates new project repositories -- for use on both server
 	 and client -- on client you should specify the remote-url arg which should be:
 	 just your username and server name on server: username@server.my.university.edu

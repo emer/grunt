@@ -42,6 +42,9 @@ tasks_per_node = 1
 # qos is the queue name
 qos = "blanca-ccn"
 
+# qos short is short name for queue if name is cutoff
+qos_short = "blanca-cc"
+
 # in other cases, you might have to specify a partition
 # partition = "low"
 
@@ -212,6 +215,39 @@ def cancel():
         print("Failed to cancel job")
         return
 
+# custom command to get info on cluster        
+def queue():
+    result = ""
+    try:
+        result = subprocess.check_output(["sinfo"], universal_newlines=True)
+    except subprocess.CalledProcessError:
+        print("Failed to run sinfo")
+    res = result.splitlines()
+    ts = timestamp_local(datetime.now(timezone.utc))
+    qout = ["queue at: " + ts + "\n", "sinfo on: " + qos + "\n"]
+    for r in res:
+        if qos in r:   # filter by qos
+            qout.append(r)
+            
+    qout.append("\nsqueue -p " + qos + "\n")
+    try:
+        result = subprocess.check_output(["squeue", "-p", qos], universal_newlines=True)
+    except subprocess.CalledProcessError:
+        print("Failed to run squeue")
+    res = result.splitlines()
+    for r in res:
+        if "blanca-cc" in r:  # doesn't fit full qos
+            qout.append(r)
+    
+    qout.append("\nsqueue -u " + grunt_user + "\n")
+    try:
+        result = subprocess.check_output(["squeue", "-u", grunt_user], universal_newlines=True)
+    except subprocess.CalledProcessError:
+        print("Failed to run squeue")
+    qout.extend(res)
+    
+    write_string("job.queue", "\n".join(qout))
+    
 if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\ngrunter.py is the git-based run tool extended run script\n")
     print("supports the following commands:\n")
@@ -232,6 +268,8 @@ elif cmd == "status":
     status()
 elif cmd == "cancel":
     cancel()
+elif cmd == "queue":
+    queue()
 else:
     print("grunter.py: error: cmd not recognized: " + cmd)
     exit(1)
