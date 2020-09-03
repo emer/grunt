@@ -333,7 +333,7 @@ func (gr *Grunt) Submit(args, message string) {
 	argv = append(argv, message)
 	gr.RunGruntUpdt("submit", argv)
 	gr.ToolBar.UpdateActions()
-	gr.NextCmd = "status"
+	// gr.NextCmd = "status"
 	gr.TabView.SelectTabByName("Active")
 }
 

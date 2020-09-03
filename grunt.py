@@ -186,7 +186,10 @@ def copy_grunter_to_jobs(jobid):
     # copies grunter to jobs
     f = "grunter.py"
     jf = os.path.join(grunt_active, jobid, grunt_proj, f)
-    shutil.copyfile(f, jf)
+    try:
+        shutil.copyfile(f, jf)
+    except Exception as e:
+        pass
     grunt_jobs_repo.git.add(jf)
 
 def print_job_out(jobid):
