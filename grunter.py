@@ -236,7 +236,7 @@ def queue():
         print("Failed to run squeue")
     res = result.splitlines()
     for r in res:
-        if "blanca-cc" in r:  # doesn't fit full qos
+        if qos_short in r:  # doesn't fit full qos
             qout.append(r)
     
     qout.append("\nsqueue -u " + grunt_user + "\n")
@@ -244,7 +244,10 @@ def queue():
         result = subprocess.check_output(["squeue", "-u", grunt_user], universal_newlines=True)
     except subprocess.CalledProcessError:
         print("Failed to run squeue")
-    qout.extend(res)
+    res = result.splitlines()
+    for r in res:
+        if qos_short in r:  # doesn't fit full qos
+            qout.append(r)
     
     write_string("job.queue", "\n".join(qout))
     
