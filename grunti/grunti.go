@@ -296,8 +296,11 @@ func (gr *Grunt) PlotResults() {
 		gr.Plot.SetTable(dt)
 	} else {
 		gr.AggRes = nil // reset
-		for i := range sel {
-			r := gr.ResList[sel[i]]
+		for _, ri := range sel {
+			if ri >= len(gr.ResList) {
+				continue
+			}
+			r := gr.ResList[ri]
 			// fmt.Printf("job: %d  %s\n", i, r.JobId)
 			dt := r.TableWithJobId()
 			if dt == nil {
