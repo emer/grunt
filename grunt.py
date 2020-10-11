@@ -770,6 +770,15 @@ elif (cmd == "queue"):
     time.sleep(10)
     pull_jobs_repo()
     print_job_file(grunt_jobid, "job.queue")
+elif (cmd == "newproj"):
+    if len(sys.argv) < 3:
+        print("newproj command requires name of project")
+        exit(1)
+    projnm = sys.argv[2]
+    remote = ""
+    if len(sys.argv) == 4:
+        remote = sys.argv[3]
+    init_repos(projnm, remote)
 elif (cmd == "newproj-server"):
     if len(sys.argv) < 3:
         print("newproj command requires name of project")
