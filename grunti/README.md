@@ -2,6 +2,18 @@
 
 `grunti` is a GUI interface to the grunt client, providing table views of jobs in the different status (pending, running, done), and actions performed on selected jobs.
 
+# Install
+
+Do the standard `go get` to automatically build and install it in your `~/go/bin` (or wherever `GOPATH` points):
+
+```sh
+$ go get github.com/emer/grunt/grunti
+```
+
+**You must run grunti, like grunt, from your project directory** that has the simulation or other task that you're running.  Thus, `~/go/bin` must be on your `PATH` so you can just run `grunti&` to run it.
+
+# Usage
+
 `grunti` only shows the state of the *local* git repositories -- grunt depends on a `git pull` via the `Update` action to grab the latest `git` state that might have been updated from the server.
 
 Furthermore, current job status and results require explicit `Status` and `Results` "pings" to tell the server to commit the latest info to the `git` repository, after which the `Update` will make it visible locally in grunti.
