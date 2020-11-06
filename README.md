@@ -4,7 +4,7 @@
 
 The remote machine (e.g., a compute server) hosts the git repository, which is accessed via ssh, and everything is done in user-space, so no root access is required anywhere. The core tools are written in python3.
 
-See `grunti` directory for a GUI interface written in Go, which makes usage considerably simpler than the command line.
+See [grunti](https://github.com/emer/grunt/tree/master/grunti) directory for a GUI interface written in Go, which makes usage considerably simpler than the command line.
 
 The central principles are:
 
