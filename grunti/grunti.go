@@ -250,6 +250,10 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 		return
 	}
 	avw := gr.ActiveView()
+	if avw == nil {
+		gr.StatusMsg("Could not get jobs -- no job views visible")
+		return
+	}
 	jtab := avw.Table.Table
 	for _, jb := range jobs {
 		jrow := jtab.RowsByString("JobId", jb, etable.Equals, etable.UseCase)
