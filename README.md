@@ -55,6 +55,8 @@ $ ln -s ~/emer/grunt/grunt.py ~/bin/grunt
 
 ## Server side
 
+* Before starting server for very first time, create a [project](#Projects) -- this creates various directories and sets the server name etc.
+
 * It is easiest to run directly from the git source repo -- you don't need to run command from your project dirs.
 
 * To run daemon, do:
