@@ -578,6 +578,7 @@ func (gr *Grunt) Config() *gi.Window {
 
 	tv := gi.AddNewTabView(mfr, "tv")
 	gr.TabView = tv
+	tv.NoDeleteTabs = true
 
 	gr.StatLabel = gi.AddNewLabel(mfr, "status", "Status...")
 	gr.StatLabel.SetStretchMaxWidth()

@@ -269,10 +269,8 @@ def write_cmd(jobid, cmd, cmdstr):
     print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
     
 def commit_cmd(cmd):
-    print(cmd)
     grunt_jobs_repo.index.commit("Command: " + cmd)
     grunt_jobs_repo.remotes.origin.push()
-    print("did push")
 
 def write_commit_cmd(jobid, cmd, cmdstr):
     write_cmd(jobid, cmd, cmdstr)
