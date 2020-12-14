@@ -269,8 +269,10 @@ def write_cmd(jobid, cmd, cmdstr):
     print("job: " + jobid + " command: " + cmd + " = " + cmdstr)
     
 def commit_cmd(cmd):
+    print(cmd)
     grunt_jobs_repo.index.commit("Command: " + cmd)
     grunt_jobs_repo.remotes.origin.push()
+    print("did push")
 
 def write_commit_cmd(jobid, cmd, cmdstr):
     write_cmd(jobid, cmd, cmdstr)
@@ -755,6 +757,7 @@ elif (cmd == "results"):
         for jb in job_args:
             grunt_jobid = jb
             write_cmd(grunt_jobid, cmd, timestamp())
+        commit_cmd(cmd)
 elif (cmd == "files"):
     pull_jobs_repo()
     if len(sys.argv) < 4:
