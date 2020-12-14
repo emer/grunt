@@ -97,16 +97,16 @@ func (gr *Grunt) UpdateViews() {
 	gr.DoneView.UpdateTable()
 }
 
-// Update is the main update -- opens jobs and updates views, under lock
-func (gr *Grunt) Update() {
+// Pull is the main update -- does pull, opens jobs and updates views, under lock
+func (gr *Grunt) Pull() {
 	gr.UpdtMu.Lock()
 	defer gr.UpdtMu.Unlock()
 
-	gr.UpdateLocked()
+	gr.PullLocked()
 }
 
-// UpdateLocked does the update under existing lock
-func (gr *Grunt) UpdateLocked() {
+// PullLocked does the Pull under existing lock
+func (gr *Grunt) PullLocked() {
 	if !gr.Win.IsVisible() {
 		return
 	}
@@ -130,7 +130,7 @@ func (gr *Grunt) StartAutoUpdt() {
 
 	if gr.UpdtTick == nil {
 		gr.UpdtTick = time.NewTicker(time.Duration(gr.Params.UpdtIntervalSec) * time.Second)
-		go gr.TickerUpdate()
+		go gr.TickerPull()
 	}
 }
 
@@ -139,14 +139,14 @@ func (gr *Grunt) InAutoUpdt() bool {
 	return time.Now().Before(gr.Timeout)
 }
 
-// TickerUpdate is the update function from the ticker
-func (gr *Grunt) TickerUpdate() {
+// TickerPull is the update function from the ticker
+func (gr *Grunt) TickerPull() {
 	for {
 		<-gr.UpdtTick.C
 		gr.UpdtMu.Lock()
 		if gr.InAutoUpdt() {
 			gr.StatusMsg("updating...")
-			gr.UpdateLocked()
+			gr.PullLocked()
 			gr.StatusMsg("updated: " + time.Now().Format("15:04:05"))
 		} else {
 			if gr.NextCmd != "" {
@@ -210,7 +210,7 @@ func (gr *Grunt) RunGrunt(grcmd string, args []string) ([]byte, error) {
 
 // RunGruntUpdt runs given grunt command with given args, returning resulting
 // output and error, showing command in status and sending output to
-// Output tab.  Then it activates an Update loop until timeout.
+// Output tab.  Then it activates an Pull loop until timeout.
 // This is the version for user-initiated commands.
 func (gr *Grunt) RunGruntUpdt(grcmd string, args []string) ([]byte, error) {
 	out, err := gr.RunGrunt(grcmd, args)
@@ -638,10 +638,10 @@ func (gr *Grunt) Config() *gi.Window {
 
 	// toolbar
 
-	tbar.AddAction(gi.ActOpts{Label: "Update", Icon: "update", Tooltip: "pull updates that might have been pushed from the server, for both results and jobs", UpdateFunc: func(act *gi.Action) {
+	tbar.AddAction(gi.ActOpts{Label: "Pull", Icon: "update", Tooltip: "pull updates that might have been pushed from the server, for both results and jobs", UpdateFunc: func(act *gi.Action) {
 		act.SetActiveStateUpdt(!gr.InAutoUpdt())
 	}}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
-		gr.Update()
+		gr.Pull()
 		tbar.UpdateActions()
 	})
 
