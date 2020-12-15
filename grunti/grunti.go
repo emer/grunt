@@ -7,6 +7,7 @@
 package main
 
 import (
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -263,13 +264,18 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 		}
 		fnm := filepath.Join("gresults", jb)
 		fls := dirs.ExtFileNames(fnm, []string{ext})
+		got := false
 		for _, fl := range fls {
 			if strings.Contains(fl, fileContains) {
 				if len(gr.ResList) == 1 && gr.ResList[0].JobId == "" { // remove blank
 					gr.ResList = gr.ResList[:0]
 				}
 				gr.ResList.Recycle(jb, filepath.Join(fnm, fl), msg)
+				got = true
 			}
+		}
+		if !got {
+			gr.StatusMsg(fmt.Sprintf("Job: %s not found in gresults -- need to run Link?", jb))
 		}
 	}
 	gr.TabView.SelectTabByName("Results")
