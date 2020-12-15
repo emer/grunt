@@ -222,10 +222,10 @@ def diff_job(jobid):
     job = os.path.join(grunt_active, jobid, grunt_proj)
     subprocess.run(["diff","-uw", "-x", "job.*", "-x", "jobs.*", "-x", "grcmd.*", "-x", "gresults", "-x", ".*", "./", job])
         
-def done_job_needs_update(jobid):
-    # if job.end is later than grcmd.update (or it doesn't even exist), then needs update
+def done_job_needs_results(jobid):
+    # if job.end is later than grcmd.results (or it doesn't even exist), then needs results
     jobdir = os.path.join(grunt_active, jobid, grunt_proj)
-    updtcmd = os.path.join(jobdir, "grcmd.update")
+    updtcmd = os.path.join(jobdir, "grcmd.results")
     if not os.path.isfile(updtcmd):
         return True
     updtime = read_timestamp(updtcmd)
@@ -746,7 +746,7 @@ elif (cmd == "results"):
             grunt_jobid = jb[0]
             if jb[2] == "Canceled":
                 continue
-            if done_job_needs_update(grunt_jobid):
+            if done_job_needs_results(grunt_jobid):
                 write_cmd(grunt_jobid, cmd, timestamp())
                 link_results(grunt_jobid)
         commit_cmd(cmd)
@@ -755,6 +755,7 @@ elif (cmd == "results"):
         for jb in job_args:
             grunt_jobid = jb
             write_cmd(grunt_jobid, cmd, timestamp())
+            link_results(grunt_jobid)
         commit_cmd(cmd)
 elif (cmd == "files"):
     pull_jobs_repo()
