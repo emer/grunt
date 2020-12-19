@@ -50,7 +50,7 @@ tasks_per_node = 1
 partition = "low"
 
 # default array settings, settings of runniing the same job multiple times in parallel. E.g. 10 runs in parallel
-array = "0-2"
+array = "0-9"
 
 # number of emergent runs per arrray job (MaxRuns)
 runs = 1
@@ -187,8 +187,8 @@ def write_sbatch():
     f.write("fi\n")
     f.write("srun ./" + grunt_proj + " --nogui --run $SLURM_ARRAY_TASK_ID --runs $((SLURM_ARRAY_TASK_ID + " + str(runs) + ")) " +
             args + "\n")
-    f.write("awk '(NR == 1) || (FNR > 1)' *epc.csv > " + grunt_proj + "_epc.csv" "\n")
-    f.write("awk '(NR == 1) || (FNR > 1)' *run.csv > " + grunt_proj + "_run.csv" "\n")
+    f.write("awk '(NR == 1) || (FNR > 1)' *epc.csv > " + grunt_proj + "_fullepc.csv" "\n")
+    f.write("awk '(NR == 1) || (FNR > 1)' *run.csv > " + grunt_proj + "_fullrun.csv" "\n")
 
     # Once job is complete, check which other array jobs are still pending or running
     f.write("squeue -j $SLURM_ARRAY_JOB_ID -o %T | grep -E \"(RUNNING|PENDING)\"\n")
@@ -222,8 +222,8 @@ def submit():
 
 def results():
     # important: update this to include any results you want to add to results repo
-    print("\n".join(glob.glob('*_epc.*sv')))
-    print("\n".join(glob.glob('*_run.*sv')))
+    print("\n".join(glob.glob('*_fullepc.*sv')))
+    print("\n".join(glob.glob('*_fullrun.*sv')))
 
 
 def status():
