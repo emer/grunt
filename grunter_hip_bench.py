@@ -187,8 +187,8 @@ def write_sbatch():
     f.write("fi\n")
     f.write("srun ./" + grunt_proj + " --nogui --run $SLURM_ARRAY_TASK_ID --runs $((SLURM_ARRAY_TASK_ID + " + str(runs) + ")) " +
             args + "\n")
-    f.write("awk '(NR == 1) || (FNR > 1)' *epc.tsv > " + grunt_proj + "_epc.tsv" "\n")
-    f.write("awk '(NR == 1) || (FNR > 1)' *run.tsv > " + grunt_proj + "_run.tsv" "\n")
+    f.write("awk '(NR == 1) || (FNR > 1)' *epc.csv > " + grunt_proj + "_epc.csv" "\n")
+    f.write("awk '(NR == 1) || (FNR > 1)' *run.csv > " + grunt_proj + "_run.csv" "\n")
 
     # Once job is complete, check which other array jobs are still pending or running
     f.write("squeue -j $SLURM_ARRAY_JOB_ID -o %T | grep -E \"(RUNNING|PENDING)\"\n")
