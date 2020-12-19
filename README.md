@@ -167,63 +167,66 @@ type `grunt help` to see docs for all the commands:
 
 ```
 usage: pass commands with args as follows:
-	 <jobid..> can include space-separated list and job000011..22 range expressions
-	 end number is *inclusive*!
+	 <jobid..> can include space-separated list and [job0000]11..22 range expressions
+	 end number is *inclusive*!  prefix is optional
 
-submit	 [args] -m 'message' submits git controlled files in current dir to jobs working dir:
+uses grunt.server for commands, but lists jobs for all servers -- use server to set
+
+server	 name 	 sets server to given server name -- will be used for all commands
+
+submit	 [args] -m 'message' 	 submits git controlled files in current dir to jobs working dir:
 	 ~/grunt/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
 	 which grunter.py script uses for passing args to job -- must pass message as last arg!
 	 git commit triggers update of server git repo, and grund daemon then submits the new job.
 	 you *must* have grunter.py script in the project dir to manage actual submission!
 	 see example in https://github.com/emer/grunt repository.
 
-jobs	 [active|done] shows lists of all jobs, or specific subset
+jobs	 [active|done] 	 shows lists of all jobs, or specific subset
 	 (active = running, pending) -- ONLY reflects the last status results:
 	 do status to get latest job status from server, then jobs again in ~10 sec
 
-status	 [jobid] pings the server to check status and update job status files
+status	 [jobid] 	 pings the server to check status and update job status files
 	 on all active (running and pending) jobs if no job specified -- use jobs to see results
 
-results	 <jobid..> push current job results to results git repository
+results	 <jobid..> 	 push current job results to results git repository
 	 the specific files to get are returned by the result() function in grunter.py
 	 with no jobid it gets results on all running jobs.
 	 automatically does link on jobs to make easy to access from orig source.
 
-files	 jobid [files..] push given files for given job to results git repository
+files	 jobid [files..] 	 push given files for given job to results git repository
 	 automatically does link on jobs to make easy to access from orig source.
 
 pull	 grab any updates to jobs and results repos (done for any cmd)
 
-out	 <jobid..> displays the job.out output for given job(s)
+out	 <jobid..> 	 displays the job.out output for given job(s)
 
-ls	 <jobid..> displays the job.list file list for given job(s)
+ls	 <jobid..> 	 displays the job.list file list for given job(s)
 
-diff	 <jobid1> [jobid2] displays the diffs between either given job and current
+diff	 <jobid1> [jobid2] 	 displays the diffs between either given job and current
 	 directory, or between two jobs directories
 
-link	 <jobid..> make symbolic links into local gresults/jobid for job results
+link	 <jobid..> 	 make symbolic links into local gresults/jobid for job results
 	 this makes it easier to access the results -- this happens automatically in results cmd
 
-cancel	 <jobid..> cancel job on server
+cancel	 <jobid..> 	 cancel job on server
 
-nuke	 <jobid..> deletes given job directory (jobs and results) -- use carefully!
+nuke	 <jobid..> 	 deletes given job directory (jobs and results) -- use carefully!
 	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
 
-delete	 <jobid..> moves job directory from active to delete subdir, deletes results
+delete	 <jobid..> 	 moves job directory from active to delete subdir, deletes results
 	 useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
 
-archive	 <jobid..> moves job directory from active to archive subdir
+archive	 <jobid..> 	 moves job directory from active to archive subdir
 	 useful for removing clutter from active, and preserving important but non-current results
 
 queue	 calls queue command in grunter.py, prints resulting job.queue file
 
-newproj	 <projname> [remote-url] creates new project repositories -- for use on both server
+newproj	 <projname> [remote-url] 	 creates new project repositories -- for use on both server
 	 and client -- on client you should specify the remote-url arg which should be:
 	 just your username and server name on server: username@server.my.university.edu
 
-newproj-server	 <projname> calls: newproj projname on server -- use in existing proj
+newproj-server	 <projname> 	 calls: newproj projname on server -- use in existing proj
 	 to create a new project
-
 ```
 
 # Details
