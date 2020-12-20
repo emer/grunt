@@ -53,6 +53,9 @@ grunt_jobid = ""
 # grunt_jobnum is the number for jobid
 grunt_jobnum = 0
 
+# grunt_proj_dir is ~/grunt/projs/projname -- holds global proj info (grunt.nextjob)
+grunt_proj_dir = ""
+
 # lists of different jobs -- updated with list_jobs() at start
 jobs_active = []
 jobs_done = []
@@ -101,9 +104,10 @@ def prompt_server():
 def init_servers():
     get_projname()  # allow override with grunt.projname file
     wc = os.path.join(grunt_root, "wc")
-    # legacy: get job from server, now stored in project directory
-    jf = "grunt.nextjob"
-    havejob = os.path.isfile(jf)
+    global grunt_proj_dir
+    grunt_proj_dir = os.path.join(grunt_root, "projs", grunt_proj)
+    if not os.path.isdir(grunt_proj_dir):
+        os.makedirs(grunt_proj_dir)
     maxjob = 0
     for f in os.listdir(wc):
         swc = os.path.join(wc, f, grunt_user, grunt_proj)
@@ -111,11 +115,18 @@ def init_servers():
             continue
         srv = Server(f)
         grunt_servers[f] = srv
-        if not havejob:
-            maxjob = max(maxjob, srv.old_jobnum)
-    if not havejob:
-        with open(jf, "w") as f:
-            f.write(str(maxjob) + "\n")
+        maxjob = max(maxjob, srv.old_jobnum)
+    # legacy: get nextjob from server, now stored in projs directory
+    jf = "nextjob.id"
+    pjf = os.path.join(grunt_proj_dir, jf)
+    if not os.path.isfile(pjf):
+        ljf = "grunt.nextjob"
+        if os.path.isfile(ljf):   # was local briefly
+            shutil.copyfile(ljf, pjf)
+            os.remove(ljf)
+        else:
+            with open(pjf, "w") as f:
+                f.write(str(maxjob) + "\n")
 
 def def_server():
     # returns default server, after first doing jobs pull so ready to go
@@ -141,15 +152,16 @@ def get_projname():
             
 def new_jobid():
     global grunt_jobnum, grunt_jobid
-    jf = "grunt.nextjob"
-    if os.path.isfile(jf):
-        with open(jf, "r+") as f:
+    jf = "nextjob.id"
+    pjf = os.path.join(grunt_proj_dir, jf)
+    if os.path.isfile(pjf):
+        with open(pjf, "r+") as f:
             grunt_jobnum = int(f.readline())
             f.seek(0)
             f.write(str(grunt_jobnum + 1) + "\n")
     else:
         grunt_jobnum = 1
-        with open(jf, "w") as f:
+        with open(pjf, "w") as f:
             f.write(str(grunt_jobnum + 1) + "\n")
     grunt_jobid = grunt_userid + str(int(grunt_jobnum)).zfill(6)
     print("grunt_jobid: " + grunt_jobid)

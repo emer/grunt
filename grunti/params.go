@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/emer/etable/eplot"
 	"github.com/emer/etable/minmax"
 	"github.com/goki/ki/ki"
 	"github.com/goki/ki/kit"
@@ -16,19 +17,20 @@ import (
 
 // Params are localized settings for each project
 type Params struct {
-	XAxis           string         `desc:"default XAxis name for plots"`
-	DefRange        minmax.Range64 `desc:"default Range params for plot columns"`
-	UpdtTotalSec    int            `desc:"total number of seconds for auto-update after each action"`
-	UpdtIntervalSec int            `desc:"number of seconds to wait between auto-updates"`
-	SubmitArgs      string         `desc:"default Args for Submit -- is auto-updated and saved for each submit"`
-	SubmitMsg       string         `desc:"last message for Submit -- is auto-updated and saved for each submit"`
-	OpenResultsCont string         `desc:"default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open..."`
+	Plot            eplot.PlotParams `desc:"default parameters for plotting"`
+	DefRange        minmax.Range64   `desc:"default Range params for plot columns"`
+	UpdtTotalSec    int              `desc:"total number of seconds for auto-update after each action"`
+	UpdtIntervalSec int              `desc:"number of seconds to wait between auto-updates"`
+	SubmitArgs      string           `desc:"default Args for Submit -- is auto-updated and saved for each submit"`
+	SubmitMsg       string           `desc:"last message for Submit -- is auto-updated and saved for each submit"`
+	OpenResultsCont string           `desc:"default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open..."`
 }
 
 var KiT_Params = kit.Types.AddType(&Params{}, ParamsProps)
 
 func (pr *Params) Defaults() {
-	pr.UpdtTotalSec = 20
+	pr.Plot.Defaults()
+	pr.UpdtTotalSec = 15
 	pr.UpdtIntervalSec = 5
 	pr.DefRange.FixMin = true
 	pr.DefRange.FixMax = true
@@ -88,8 +90,18 @@ func (pr *Params) Open() error {
 	return pr.OpenJSON("grunti.pars")
 }
 
+// CopyFromPlot copy from plot
+func (pr *Params) CopyFromPlot() error {
+	pr.Plot.CopyFrom(&TheGrunt.Plot.Params)
+	return pr.Save()
+}
+
 var ParamsProps = ki.Props{
 	"ToolBar": ki.PropSlice{
+		{"CopyFromPlot", ki.Props{
+			"desc": "copy current Plot Params to Plot parameters, and save to grunti.pars file",
+			"icon": "copy",
+		}},
 		{"Save", ki.Props{
 			"desc": "save current parameters to default grunti.pars in current project",
 			"icon": "file-save",

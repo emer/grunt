@@ -8,6 +8,8 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -21,6 +23,7 @@ import (
 	"github.com/goki/gi/gi"
 	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/giv"
+	"github.com/goki/gi/units"
 	"github.com/goki/ki/dirs"
 	"github.com/goki/ki/ki"
 	"github.com/goki/ki/kit"
@@ -40,6 +43,7 @@ func guirun() {
 // Grunt interfaces with grunt commands
 type Grunt struct {
 	StatMsg  string            `desc:"last status message"`
+	Server   string            `desc:"current server"`
 	Params   Params            `desc:"params per project, saved as grunti.pars"`
 	ResList  Results           `desc:"list of loaded results"`
 	Active   *etable.Table     `desc:"jobs table"`
@@ -52,16 +56,17 @@ type Grunt struct {
 	Plot     *eplot.Plot2D     `desc:"plot"`
 	AggRes   *etable.Table     `desc:"aggregated results from multiple"`
 
-	StatLabel *gi.Label    `view:"-" desc:"status label"`
-	Win       *gi.Window   `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar  `view:"-" desc:"the master toolbar"`
-	TabView   *gi.TabView  `view:"-" desc:"the tab view"`
-	CmdMu     sync.Mutex   `view:"-" desc:"command mutex"`
-	UpdtMu    sync.Mutex   `view:"-" desc:"update mutex"`
-	InUpdt    bool         `inactive:"+" desc:"true if currently in update loop"`
-	Timeout   time.Time    `view:"-" desc:"timout for auto updater"`
-	NextCmd   string       `view:"-" desc:"next command to run after current update has timed out"`
-	UpdtTick  *time.Ticker `view:"-" desc:"update ticker"`
+	StatLabel *gi.Label     `view:"-" desc:"status label"`
+	Win       *gi.Window    `view:"-" desc:"main GUI window"`
+	ToolBar   *gi.ToolBar   `view:"-" desc:"the master toolbar"`
+	SrvField  *gi.TextField `view:"-" desc:"field for server"`
+	TabView   *gi.TabView   `view:"-" desc:"the tab view"`
+	CmdMu     sync.Mutex    `view:"-" desc:"command mutex"`
+	UpdtMu    sync.Mutex    `view:"-" desc:"update mutex"`
+	InUpdt    bool          `inactive:"+" desc:"true if currently in update loop"`
+	Timeout   time.Time     `view:"-" desc:"timout for auto updater"`
+	NextCmd   string        `view:"-" desc:"next command to run after current update has timed out"`
+	UpdtTick  *time.Ticker  `view:"-" desc:"update ticker"`
 }
 
 var KiT_Grunt = kit.Types.AddType(&Grunt{}, GruntProps)
@@ -90,6 +95,33 @@ func (gr *Grunt) ConfigJobTable(dt *etable.Table) {
 func (gr *Grunt) OpenJobs() {
 	gr.Active.OpenCSV("jobs.active", etable.Comma)
 	gr.Done.OpenCSV("jobs.done", etable.Comma)
+}
+
+// OpenServer reads current server setting for project
+func (gr *Grunt) OpenServer() error {
+	b, err := ioutil.ReadFile("grunt.server")
+	if err != nil {
+		// log.Println(err)
+		return err
+	}
+	gr.Server = strings.TrimSpace(string(b))
+	return nil
+}
+
+// SaveServer saves current server setting for project
+func (gr *Grunt) SaveServer() error {
+	err := ioutil.WriteFile("grunt.server", []byte(gr.Server), 0644)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
+}
+
+// SetServer sets server from text field and saves it
+func (gr *Grunt) SetServer() error {
+	gr.Server = gr.SrvField.Text()
+	return gr.SaveServer()
 }
 
 // UpdateViews updates the table views
@@ -287,6 +319,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 func (gr *Grunt) PlotResults() {
 	sel := gr.ResView.SelectedIdxsList(false)
 	// fmt.Printf("sel: %v\n", sel)
+	gr.Plot.Params.CopyFrom(&gr.Params.Plot)
 	if len(sel) == 0 {
 		if len(gr.ResList) == 0 {
 			gr.StatusMsg("Plot: no results to plot")
@@ -325,9 +358,9 @@ func (gr *Grunt) PlotResults() {
 		gr.Plot.Params.LegendCol = "JobId"
 		gr.Plot.SetTable(gr.AggRes)
 	}
-	if gr.Plot.Params.XAxisCol == "" {
-		gr.Plot.Params.XAxisCol = gr.Params.XAxis
-	}
+	// if gr.Plot.Params.XAxisCol == "" {
+	// 	gr.Plot.Params.XAxisCol = gr.Params.XAxis
+	// }
 	for _, cp := range gr.Plot.Cols {
 		if cp.Col != gr.Plot.Params.XAxisCol {
 			cp.Range = gr.Params.DefRange
@@ -562,6 +595,8 @@ func (gr *Grunt) ConfigTableView(tv *etview.TableView) {
 // Config configures grunt gui
 func (gr *Grunt) Config() *gi.Window {
 	gr.New()
+	gr.RunGruntCmd("jobs", nil)
+	gr.OpenServer()
 	gr.OpenJobs()
 
 	width := 1600
@@ -641,7 +676,7 @@ func (gr *Grunt) Config() *gi.Window {
 	plt := tv.AddNewTab(eplot.KiT_Plot2D, "Plot").(*eplot.Plot2D)
 	plt.SetStretchMax()
 	gr.Plot = plt
-	gr.Plot.Params.XAxisCol = gr.Params.XAxis
+	gr.Plot.Params.CopyFrom(&gr.Params.Plot)
 
 	// toolbar
 
@@ -767,6 +802,22 @@ func (gr *Grunt) Config() *gi.Window {
 		func(recv, send ki.Ki, sig int64, data interface{}) {
 			gi.OpenURL("https://github.com/emer/grunt/blob/master/grunti/README.md")
 		})
+
+	tbar.AddAction(gi.ActOpts{Label: "Server:", Icon: "file-save", Tooltip: "set the server to value shown to right, used for submitting new jobs and polling for updates -- other servers are not accessed directly unless their jobs are manipulated"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gr.SetServer()
+		tbar.UpdateActions()
+	})
+
+	gr.SrvField = gi.AddNewTextField(tbar, "server")
+	gr.SrvField.SetProp("width", units.NewEm(10))
+	gr.SrvField.SetText(gr.Server)
+	gr.SrvField.Tooltip = "name of default server used for submitting new jobs and polling for updates -- other servers are not accessed directly unless their jobs are manipulated -- to set after changing, click SetServer or just hit return in this field"
+	gr.SrvField.TextFieldSig.Connect(win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		if sig == int64(gi.TextFieldDone) {
+			gr.SetServer()
+			tbar.UpdateActions()
+		}
+	})
 
 	vp.UpdateEndNoSig(updt)
 
