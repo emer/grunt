@@ -18,7 +18,7 @@ $ go get github.com/emer/grunt/grunti
 
 Furthermore, current job status and results require explicit `Status` and `Results` "pings" to tell the server to commit the latest info to the `git` repository, after which the `Pull` will make it visible locally in grunti.
 
-In short, typically start by pressing `Status` to make sure things are updated!
+In short, typically start by pressing `Status` to make sure things are updated!  This will only ping the current `Server` -- set that as needed.
 
 Where appropriate, actions will auto-pull for 15 seconds -- the `Pull` button will be ghosted.  You may need to manually do `Pull` after this period if the command is still being processed on the server and the commit / push has not happened yet there.
 
@@ -28,7 +28,11 @@ Mouse over toolbar buttons to see more details about each action, which correspo
 
 # Params
 
-See `Params` tab for various default params that can be modified to save retyping commonly-used settings, or to tweak the auto pull times etc.  `SubmitArgs` and `OpenResultsCont` are auto-saved each time.
+See `Params` tab for various default params that can be modified to save retyping commonly-used settings, including the full set of Plot parameters, or to tweak the auto pull times etc.  `SubmitArgs` and `OpenResultsCont` are auto-saved each time.
+
+Use `Copy From Plot` toolbar action to grab the current Plot params if you've changed them, so they become the new default.  Otherwise, it always overwrites any plot params based on the defaults *only if* the `XAxisCol` has been set in the Plot params (otherwise it assumes they haven't been set).
+
+In other words, after you get your plot looking good, go to the `Params` tab, and click `Copy From Plot` so those settings will be avail next time.
 
 # Plotting Results
 

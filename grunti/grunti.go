@@ -319,7 +319,9 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 func (gr *Grunt) PlotResults() {
 	sel := gr.ResView.SelectedIdxsList(false)
 	// fmt.Printf("sel: %v\n", sel)
-	gr.Plot.Params.CopyFrom(&gr.Params.Plot)
+	if gr.Params.Plot.XAxisCol != "" {
+		gr.Plot.Params.CopyFrom(&gr.Params.Plot)
+	}
 	if len(sel) == 0 {
 		if len(gr.ResList) == 0 {
 			gr.StatusMsg("Plot: no results to plot")
