@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -56,6 +57,7 @@ type Grunt struct {
 	Plot     *eplot.Plot2D     `desc:"plot"`
 	AggRes   *etable.Table     `desc:"aggregated results from multiple"`
 
+	DirName   string        `view:"-" desc:"path/dir for current project"`
 	StatLabel *gi.Label     `view:"-" desc:"status label"`
 	Win       *gi.Window    `view:"-" desc:"main GUI window"`
 	ToolBar   *gi.ToolBar   `view:"-" desc:"the master toolbar"`
@@ -600,6 +602,8 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.RunGruntCmd("jobs", nil)
 	gr.OpenServer()
 	gr.OpenJobs()
+	cwd, _ := os.Getwd()
+	gr.DirName = giv.DirAndFile(cwd)
 
 	width := 1600
 	height := 1200
@@ -607,7 +611,7 @@ func (gr *Grunt) Config() *gi.Window {
 	gi.SetAppName("grunti")
 	gi.SetAppAbout(`grunti provides an interface to the git-based run tool, grunt. See <a href="https://github.com/emer/grunt">grunt on GitHub</a>.</p>`)
 
-	win := gi.NewMainWindow("grunti", "Grunti", width, height)
+	win := gi.NewMainWindow("grunti", "Grunti "+gr.DirName, width, height)
 	gr.Win = win
 
 	vp := win.WinViewport2D()
