@@ -202,6 +202,8 @@ out	 <jobid..> 	 displays the job.out output for given job(s)
 
 ls	 <jobid..> 	 displays the job.list file list for given job(s)
 
+message	 jobid 'message' 	 write a new job.message for given job
+
 diff	 <jobid1> [jobid2] 	 displays the diffs between either given job and current
 	 directory, or between two jobs directories
 

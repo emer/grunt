@@ -713,6 +713,8 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
 
     print("ls\t <jobid..> \t displays the job.list file list for given job(s)\n")
 
+    print("message\t jobid 'message' \t write a new job.message for given job\n")
+
     print("diff\t <jobid1> [jobid2] \t displays the diffs between either given job and current")
     print("\t directory, or between two jobs directories\n")
 
@@ -780,6 +782,23 @@ elif (cmd == "server"):
         print("Error: must pass server name")
         exit(1)
     save_server(sys.argv[2])
+elif (cmd == "message"):
+    if len(sys.argv) != 4:
+        print("Error: must pass exactly 2 args: jobid and new message to write")
+        exit(1)
+    jb = sys.argv[2]
+    jr = find_job(jb)
+    if jr is None:
+        print("diff: job not found:", jb)
+        exit(1)
+    ts = grunt_servers[jr[1]]
+    ts.pull_jobs()
+    msg = sys.argv[3]
+    jdir = os.path.join(ts.active, jb, grunt_proj)
+    jmsg = os.path.join(jdir, "job.message")
+    write_string(jmsg, msg)
+    ts.jobs_repo.index.commit("Update message: " + jb + " " + msg)
+    ts.jobs_repo.remotes.origin.push()
 elif (cmd == "jobs"):
     srv = def_server() # pull jobs, update list
     if len(sys.argv) < 3:
@@ -916,8 +935,8 @@ elif (cmd == "results"):
                 continue
             sname = jb[1]
             ts = grunt_servers[sname]
-            slist[sname] = ts
             if ts.done_job_needs_results(grunt_jobid):
+                slist[sname] = ts
                 ts.write_cmd(grunt_jobid, cmd, timestamp())
                 ts.link_results(grunt_jobid)
     else:

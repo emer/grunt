@@ -431,6 +431,26 @@ func (gr *Grunt) Diff() {
 	gr.RunGrunt("diff", jobs)
 }
 
+// Message updates message for given job
+func (gr *Grunt) Message() {
+	jobs := gr.SelectedJobs(true) // need
+	if len(jobs) != 1 {
+		gr.StatusMsg(`<span style="color:red">Error: Must have exactly 1 job selected</span>`)
+		return
+	}
+	job := jobs[0]
+	msg := gr.JobField(job, "Message")
+	var dlg *gi.Dialog
+	dlg = gi.StringPromptDialog(gr.Win.Viewport, msg, "enter message", gi.DlgOpts{Title: "Enter Message", Prompt: "Update existing Message"},
+		gr.Win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+			if sig == int64(gi.DialogAccepted) {
+				msg = gi.StringPromptDialogValue(dlg)
+				gr.RunGrunt("message", []string{job, msg})
+				gr.Pull() // just once
+			}
+		})
+}
+
 // Queue displays job queue information from the server
 // in Output tab
 func (gr *Grunt) Queue() {
@@ -527,6 +547,23 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 		jobs[i] = jb
 	}
 	return jobs
+}
+
+// JobField returns field value of given name for given job id in ActiveView
+func (gr *Grunt) JobField(job, field string) string {
+	avw := gr.ActiveView()
+	if avw == nil {
+		gr.StatusMsg(`<span style="color:red">Error: no active view selected!</span>`)
+		return ""
+	}
+	dt := avw.Table.Table
+	rows := dt.RowsByString("JobId", job, etable.Equals, etable.UseCase)
+	if len(rows) != 1 {
+		gr.StatusMsg(`<span style="color:red">Error: job(s) not found in active view!</span>`)
+		return ""
+	}
+	row := rows[0]
+	return dt.CellString(field, row)
 }
 
 // SelectedJobsResults returns the currently-selected list of jobs
@@ -747,6 +784,11 @@ func (gr *Grunt) Config() *gi.Window {
 
 	tbar.AddAction(gi.ActOpts{Label: "Files", Icon: "file-download", Tooltip: "gets specific files as listed (space separated) into results, for files that are not automatically copied by grunter.py script -- use List to see list of files on server"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		giv.CallMethod(gr, "Files", vp)
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Message", Icon: "edit", Tooltip: "edit the job message for one selected job"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gr.Message()
+		tbar.UpdateActions()
 	})
 
 	tbar.AddAction(gi.ActOpts{Label: "Diff", Icon: "file-text", Tooltip: "displays the diffs between either given job and current directory, or between two jobs dirs in Output tab"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
