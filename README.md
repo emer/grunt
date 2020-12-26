@@ -221,6 +221,10 @@ delete	 <jobid..> 	 moves job directory from active to delete subdir, deletes re
 archive	 <jobid..> 	 moves job directory from active to archive subdir
 	 useful for removing clutter from active, and preserving important but non-current results
 
+clean	 cleans the job git directory -- if any strange ghost jobs appear in listing, do this
+	 this deletes any files that are present locally but not remotely -- should be safe for jobs
+	 except if in the process of running a command, so just wait until all current activity is done
+
 queue	 calls queue command in grunter.py, prints resulting job.queue file
 
 newproj	 <projname> [remote-url] 	 creates new project repositories -- for use on both server
@@ -286,6 +290,8 @@ myproj
 
 
 # Troubleshooting
+
+* Use `grunt clean` if you end up with "ghost" jobs in Active list after deleting / nuking / archiving.  This does a git clean on the jobs git repo to remove any local files not in repo -- usually this fixes any issues. More rarely, you may need to do something manually in the local repo or even in the server one if something wasn't deleted properly.
 
 * If you get mysterious git error messages, try running `git ls-files` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
 
