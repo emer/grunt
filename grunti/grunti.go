@@ -43,19 +43,23 @@ func guirun() {
 
 // Grunt interfaces with grunt commands
 type Grunt struct {
-	StatMsg  string            `desc:"last status message"`
-	Server   string            `desc:"current server"`
-	Params   Params            `desc:"params per project, saved as grunti.pars"`
-	ResList  Results           `desc:"list of loaded results"`
-	Active   *etable.Table     `desc:"jobs table"`
-	Done     *etable.Table     `desc:"jobs table"`
-	ActView  *etview.TableView `desc:"table view"`
-	DoneView *etview.TableView `desc:"table view"`
-	OutView  *giv.TextView     `desc:"text view"`
-	OutBuf   *giv.TextBuf      `desc:"text buf"`
-	ResView  *giv.TableView    `desc:"results table"`
-	Plot     *eplot.Plot2D     `desc:"plot"`
-	AggRes   *etable.Table     `desc:"aggregated results from multiple"`
+	StatMsg     string            `desc:"last status message"`
+	Server      string            `desc:"current server"`
+	Params      Params            `desc:"params per project, saved as grunti.pars"`
+	ResList     Results           `desc:"list of loaded results"`
+	Active      *etable.Table     `desc:"jobs table"`
+	Done        *etable.Table     `desc:"jobs table"`
+	Archive     *etable.Table     `desc:"jobs table"`
+	Delete      *etable.Table     `desc:"jobs table"`
+	ActView     *etview.TableView `desc:"table view"`
+	DoneView    *etview.TableView `desc:"table view"`
+	ArchiveView *etview.TableView `desc:"table view"`
+	DeleteView  *etview.TableView `desc:"table view"`
+	OutView     *giv.TextView     `desc:"text view"`
+	OutBuf      *giv.TextBuf      `desc:"text buf"`
+	ResView     *giv.TableView    `desc:"results table"`
+	Plot        *eplot.Plot2D     `desc:"plot"`
+	AggRes      *etable.Table     `desc:"aggregated results from multiple"`
 
 	DirName   string        `view:"-" desc:"path/dir for current project"`
 	StatLabel *gi.Label     `view:"-" desc:"status label"`
@@ -82,8 +86,12 @@ func (gr *Grunt) New() {
 	gr.Params.Open()
 	gr.Active = &etable.Table{}
 	gr.Done = &etable.Table{}
+	gr.Archive = &etable.Table{}
+	gr.Delete = &etable.Table{}
 	gr.ConfigJobTable(gr.Active)
 	gr.ConfigJobTable(gr.Done)
+	gr.ConfigJobTable(gr.Archive)
+	gr.ConfigJobTable(gr.Delete)
 	gr.ResList = make(Results, 0)
 	gr.ResList = append(gr.ResList, &Result{}) // dummy
 }
@@ -97,6 +105,8 @@ func (gr *Grunt) ConfigJobTable(dt *etable.Table) {
 func (gr *Grunt) OpenJobs() {
 	gr.Active.OpenCSV("jobs.active", etable.Comma)
 	gr.Done.OpenCSV("jobs.done", etable.Comma)
+	gr.Archive.OpenCSV("jobs.archive", etable.Comma)
+	gr.Delete.OpenCSV("jobs.delete", etable.Comma)
 }
 
 // OpenServer reads current server setting for project
@@ -130,6 +140,8 @@ func (gr *Grunt) SetServer() error {
 func (gr *Grunt) UpdateViews() {
 	gr.ActView.UpdateTable()
 	gr.DoneView.UpdateTable()
+	gr.ArchiveView.UpdateTable()
+	gr.DeleteView.UpdateTable()
 }
 
 // Pull is the main update -- does pull, opens jobs and updates views, under lock
@@ -486,9 +498,9 @@ func (gr *Grunt) Nuke() {
 	gr.RunGruntUpdt("nuke", jobs)
 }
 
-// Delete moves job directory from active to delete subdir, deletes results
+// DeleteJob moves job directory from active to delete subdir, deletes results
 // useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
-func (gr *Grunt) Delete() {
+func (gr *Grunt) DeleteJob() {
 	jobs := gr.SelectedJobs(true) // need
 	if len(jobs) == 0 {
 		return
@@ -496,14 +508,21 @@ func (gr *Grunt) Delete() {
 	gr.RunGruntUpdt("delete", jobs)
 }
 
-// Archive moves job directory from active to archive subdir
+// ArchiveJob moves job directory from active to archive subdir
 // useful for removing clutter from active, and preserving important but non-current results
-func (gr *Grunt) Archive() {
+func (gr *Grunt) ArchiveJob() {
 	jobs := gr.SelectedJobs(true) // need
 	if len(jobs) == 0 {
 		return
 	}
 	gr.RunGruntUpdt("archive", jobs)
+}
+
+// CleanJobs cleans the job git directory -- if any strange ghost jobs appear in listing, do this
+// this deletes any files that are present locally but not remotely -- should be safe for jobs
+// except if in the process of running a command, so just wait until all current activity is done
+func (gr *Grunt) CleanJobs() {
+	gr.RunGruntUpdt("clean", nil)
 }
 
 // MiscCmd runs a misc command that is passed through to grunter.py
@@ -596,6 +615,10 @@ func (gr *Grunt) ActiveView() *etview.TableView {
 		return gr.ActView
 	case gr.DoneView.IsVisible():
 		return gr.DoneView
+	case gr.ArchiveView.IsVisible():
+		return gr.ArchiveView
+	case gr.DeleteView.IsVisible():
+		return gr.DeleteView
 	}
 	return nil
 }
@@ -675,6 +698,14 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.DoneView = tv.AddNewTab(etview.KiT_TableView, "Done").(*etview.TableView)
 	gr.ConfigTableView(gr.DoneView)
 	gr.DoneView.SetTable(gr.Done, nil)
+
+	gr.ArchiveView = tv.AddNewTab(etview.KiT_TableView, "Archive").(*etview.TableView)
+	gr.ConfigTableView(gr.ArchiveView)
+	gr.ArchiveView.SetTable(gr.Archive, nil)
+
+	gr.DeleteView = tv.AddNewTab(etview.KiT_TableView, "Delete").(*etview.TableView)
+	gr.ConfigTableView(gr.DeleteView)
+	gr.DeleteView.SetTable(gr.Delete, nil)
 
 	prv := tv.AddNewTab(giv.KiT_StructView, "Params").(*giv.StructView)
 	prv.SetStretchMax()
@@ -828,7 +859,7 @@ func (gr *Grunt) Config() *gi.Window {
 		gi.PromptDialog(vp, gi.DlgOpts{Title: "Delete: Confirm", Prompt: "Are you <i>sure</i> you want to delete job(s)?"}, gi.AddOk, gi.AddCancel,
 			vp.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 				if sig == int64(gi.DialogAccepted) {
-					gr.Delete()
+					gr.DeleteJob()
 					tbar.UpdateActions()
 				}
 			})
@@ -838,7 +869,17 @@ func (gr *Grunt) Config() *gi.Window {
 		gi.PromptDialog(vp, gi.DlgOpts{Title: "Archive: Confirm", Prompt: "Are you <i>sure</i> you want to archive job(s)?"}, gi.AddOk, gi.AddCancel,
 			vp.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 				if sig == int64(gi.DialogAccepted) {
-					gr.Archive()
+					gr.ArchiveJob()
+					tbar.UpdateActions()
+				}
+			})
+	})
+
+	tbar.AddAction(gi.ActOpts{Label: "Clean", Icon: "close", Tooltip: "cleans the job git directory -- if any strange ghost jobs appear in listing, do this -- it deletes any files that are present locally but not remotely -- should be safe for jobs except if in the process of running a command, so just wait until all current activity is done"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gi.PromptDialog(vp, gi.DlgOpts{Title: "Clean: Confirm", Prompt: "Are you <i>sure</i> you want to clean job git directory (should be safe but better to make sure all current command activity done)?"}, gi.AddOk, gi.AddCancel,
+			vp.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+				if sig == int64(gi.DialogAccepted) {
+					gr.CleanJobs()
 					tbar.UpdateActions()
 				}
 			})

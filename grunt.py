@@ -59,6 +59,8 @@ grunt_proj_dir = ""
 # lists of different jobs -- updated with list_jobs() at start
 jobs_active = []
 jobs_done = []
+jobs_delete = []
+jobs_archive = []
 jobs_header =     ["$JobId", "$Server", "$SlurmId", "$Status", "$SlurmStat", "$Submit", "$Start", "$End", "$Args", "$Message"]
 jobs_header_sep = ["=======", "=======", "=======", "=======", "=======", "=======", "=======", "=======", "=======", "======="]
 
@@ -271,44 +273,64 @@ def argslist():
 def jobid_fm_jobs_list(lst):
     return lst[0]
     
+def read_job_info(jobid, pdir, sname):
+    # returns a standard job record from given directory, with "done" or "active" status at start
+    jdir = os.path.join(pdir, jobid, grunt_proj)
+    jst = os.path.join(jdir, "job.start")
+    jed = os.path.join(jdir, "job.end")
+    jcan = os.path.join(jdir, "job.canceled")
+    jslid = os.path.join(jdir, "job.slurmid")
+    args = " ".join(read_strings_strip(os.path.join(jdir, "job.args")))
+    slurmid = read_string(jslid)
+    slurmstat = read_string(os.path.join(jdir, "job.status"))
+    msg = read_string(os.path.join(jdir, "job.message"))
+    sub = read_timestamp_to_local(os.path.join(jdir, "job.submit"))
+    st = read_timestamp_to_local(jst)
+    ed = read_timestamp_to_local(jed)
+    if os.path.isfile(jcan):
+        ed = read_timestamp_to_local(jcan)
+        return ("done", [jobid, sname, slurmid, "Canceled", slurmstat, sub, st, ed, args, msg])
+    elif os.path.isfile(jst) and os.path.isfile(jslid):
+        if os.path.isfile(jed):
+            return ("done", [jobid, sname, slurmid, "Done", slurmstat, sub, st, ed, args, msg])
+        else:
+            return ("active", [jobid, sname, slurmid, "Running", slurmstat, sub, st, "", args, msg])
+    else:
+        return ("active", [jobid, sname, "", "Pending", slurmstat, sub, st, ed, args, msg])
+    
+    
 def list_jobs():
-    # generates lists of jobs from server with statuses (not archived, deleted)
-    global jobs_active, jobs_done
+    # generates lists of jobs from server with statuses
+    global jobs_active, jobs_done, jobs_delete, jobs_archive
     jobs_active = []
     jobs_done = []
+    jobs_delete = []
+    jobs_archive = []
+    jdirs = ["active", "archive", "delete"]
     for sname, srv in grunt_servers.items():
-        for jobid in os.listdir(srv.active):
-            if not jobid.startswith(grunt_userid):
-                continue
-            jdir = os.path.join(srv.active, jobid, grunt_proj)
-            jsub = os.path.join(jdir, "job.submit")
-            jst = os.path.join(jdir, "job.start")
-            jed = os.path.join(jdir, "job.end")
-            jcan = os.path.join(jdir, "job.canceled")
-            jstat= os.path.join(jdir, "job.status")
-            jslid = os.path.join(jdir, "job.slurmid")
-            jmsg = os.path.join(jdir, "job.message")
-            args = " ".join(read_strings_strip(os.path.join(jdir, "job.args")))
-            slurmid = read_string(jslid)
-            slurmstat = read_string(jstat)
-            msg = read_string(jmsg)
-            sub = read_timestamp_to_local(jsub)
-            st = read_timestamp_to_local(jst)
-            ed = read_timestamp_to_local(jed)
-            if os.path.isfile(jcan):
-                ed = read_timestamp_to_local(jcan)
-                jobs_done.append([jobid, sname, slurmid, "Canceled", slurmstat, sub, st, ed, args, msg])
-            elif os.path.isfile(jst) and os.path.isfile(jslid):
-                if os.path.isfile(jed):
-                    jobs_done.append([jobid, sname, slurmid, "Done", slurmstat, sub, st, ed, args, msg])
-                else:
-                    jobs_active.append([jobid, sname, slurmid, "Running", slurmstat, sub, st, "", args, msg])
-            else:
-                jobs_active.append([jobid, sname, "", "Pending", slurmstat, sub, st, ed, args, msg])
+        for jd in jdirs:
+            jdir = os.path.join(srv.jobs, jd)
+            for jobid in os.listdir(jdir):
+                if not jobid.startswith(grunt_userid):
+                    continue
+                (st, jr) = read_job_info(jobid, jdir, sname)
+                if jd == "active":
+                    if st == "active":
+                        jobs_active.append(jr)
+                    else: # done
+                        jobs_done.append(jr)
+                elif jd == "archive":
+                    jobs_archive.append(jr)
+                elif jd == "delete":
+                    jobs_delete.append(jr)
     jobs_active.sort(key=jobid_fm_jobs_list)
     jobs_done.sort(key=jobid_fm_jobs_list)
+    jobs_archive.sort(key=jobid_fm_jobs_list)
+    jobs_delete.sort(key=jobid_fm_jobs_list)
     write_csv("jobs.active", jobs_header, jobs_active) 
     write_csv("jobs.done", jobs_header, jobs_done) 
+    write_csv("jobs.archive", jobs_header, jobs_archive) 
+    write_csv("jobs.delete", jobs_header, jobs_delete) 
 
 def print_jobs(jobs_list, desc):
     print("\n################################\n#  " + desc)
@@ -338,11 +360,24 @@ def find_job_impl(jid, jlist):
     return None
     
 def find_job(jid):
-    # find given job id in jobs_active, jobs_done
+    # find given job id in jobs_active, jobs_done -- returns None if not found -- see also find_other_job
     jr = find_job_impl(jid, jobs_active)
     if not jr is None:
         return jr
-    return find_job_impl(jid, jobs_done)
+    jr = find_job_impl(jid, jobs_done)
+    if not jr is None:
+        return jr
+    return None
+    
+def find_other_job(jid):
+    # find given job id in jobs_delete, jobs_archive -- returns name of list as first rval
+    jr = find_job_impl(jid, jobs_archive)
+    if not jr is None:
+        return ("archive", jr)
+    jr = find_job_impl(jid, jobs_delete)
+    if not jr is None:
+        return ("delete", jr)
+    return None
     
 def glob_job_args(jl):
     # this gets a list of jobids that expands ranges of the form [job00000]1..300
@@ -353,7 +388,12 @@ def glob_job_args(jl):
         if ddi == None:
             jr = find_job(j)
             if jr is None:
-                del njl[i]
+                jr = find_other_job(j)
+                if jr is None:
+                    del njl[i]
+                    continue
+                else:
+                    jr = jr[1]
             njl[i] = jr[0] # get official one
             continue
         sts = j[:ddi]
@@ -366,7 +406,8 @@ def glob_job_args(jl):
         for jn in range(st, ed+1):
             jns = sts[:len(sts)-len(eds)] + str(jn).zfill(len(eds))
             if find_job(jns) is None:
-                continue
+                if find_other_job(jns) is None:
+                    continue
             if first:
                 njl[i] = jns
                 first = False
@@ -576,15 +617,15 @@ class Server(object):
             shutil.copyfile(f, jf)
             self.jobs_repo.git.add(jf)
 
-    def print_job_out(self, jobid):
-        job_out = os.path.join(self.active, jobid, grunt_proj, "job.out")
-        print("\noutput from job: %s" % (job_out))
-        print(job_out + "\n")
+    def print_job_out(self, jdir, jobid):
+        job_out = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.out")
+        print("output from job: %s" % (job_out))
         out = read_strings(job_out)
         print("".join(out))
+        print()
             
-    def print_job_list(self, jobid):
-        job_ls = os.path.join(self.active, jobid, grunt_proj, "job.list")
+    def print_job_list(self, jdir, jobid):
+        job_ls = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.list")
         fl = read_csv(job_ls, True)
         for row in fl:
             row[1] = "{:,}".format(int(row[1])).rjust(16)
@@ -595,7 +636,7 @@ class Server(object):
         lens = [max(1,max(map(len, col))) for col in zip(*s)]
         fmt = '\t'.join('{{:{}s}}'.format(x) for x in lens)
         table = [fmt.format(*row) for row in s]
-        print("\nfiles from job: %s" % (job_ls))
+        print("files from job: %s" % (job_ls))
         print('\n'.join(table))
         print()
             
@@ -607,13 +648,13 @@ class Server(object):
         for r in fc:
             print(r)
         
-    def diff_jobs(self, jobid1, jobid2):
-        job1 = os.path.join(self.active, jobid1, grunt_proj)
-        job2 = os.path.join(self.active, jobid2, grunt_proj)
+    def diff_jobs(self, jdir1, jobid1, jdir2, jobid2):
+        job1 = os.path.join(self.jobs, jdir1, jobid1, grunt_proj)
+        job2 = os.path.join(self.jobs, jdir2, jobid2, grunt_proj)
         subprocess.run(["diff","-uw","-x", "job.*", "-x", "grcmd.*", job1, job2])
             
-    def diff_job(self, jobid):
-        job = os.path.join(self.active, jobid, grunt_proj)
+    def diff_job(self, jdir, jobid):
+        job = os.path.join(self.jobs, jdir, jobid, grunt_proj)
         subprocess.run(["diff","-uw", "-x", "job.*", "-x", "jobs.*", "-x", "grcmd.*", "-x", "gresults", "-x", ".*", "./", job])
             
     def done_job_needs_results(self, jobid):
@@ -642,16 +683,17 @@ class Server(object):
             os.makedirs("gresults")
         if not os.path.islink(dst):
             os.symlink(res, dst, target_is_directory=False)
-            print("\nlinked: " + res + " -> " + dst + "\n")
+            print("linked: " + res + " -> " + dst)
             
     def unlink_results(self, jobid):
-        res = os.path.join(self.results, "active", jobid, grunt_proj)
         dst = os.path.join("gresults", jobid)
         if not os.path.isdir("gresults"):
             return
         if os.path.islink(dst):
             os.unlink(dst)
-            print("\nunlinked: " + dst + "\n")
+            print("unlinked: " + dst)
+        else:
+            print("job was not linked: %s" % (dst))
         
     def write_cmd(self, jobid, cmd, cmdstr):
         self.open_jobs()
@@ -672,6 +714,11 @@ class Server(object):
         self.write_cmd(jobid, cmd, cmdstr)
         self.commit_cmd(cmd)
     
+    def clean_jobs(self):
+        self.open_jobs()
+        print("cleaned  jobs dir: " + self.jobs)
+        self.jobs_repo.git.clean("-xfd")
+        
         
 ##########################################################    
 # Running starts here
@@ -692,7 +739,7 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
     print("\t you *must* have grunter.py script in the project dir to manage actual submission!")
     print("\t see example in https://github.com/emer/grunt repository.\n")
 
-    print("jobs\t [active|done] \t shows lists of all jobs, or specific subset")
+    print("jobs\t [active|done|archive|delete] \t shows lists of all jobs, or specific subset")
     print("\t (active = running, pending) -- ONLY reflects the last status results:")
     print("\t do status to get latest job status from server, then jobs again in ~10 sec\n")
 
@@ -731,6 +778,10 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
 
     print("archive\t <jobid..> \t moves job directory from active to archive subdir")
     print("\t useful for removing clutter from active, and preserving important but non-current results\n")
+
+    print("clean\t cleans the job git directory -- if any strange ghost jobs appear in listing, do this")
+    print("\t this deletes any files that are present locally but not remotely -- should be safe for jobs")
+    print("\t except if in the process of running a command, so just wait until all current activity is done\n")
 
     print("queue\t calls queue command in grunter.py, prints resulting job.queue file\n")
     
@@ -807,6 +858,10 @@ elif (cmd == "jobs"):
     else:
         if sys.argv[2] == "done":
             print_jobs(jobs_done, "Done Jobs")
+        elif sys.argv[2] == "archive":
+            print_jobs(jobs_archive, "Archive Jobs")
+        elif sys.argv[2] == "delete":
+            print_jobs(jobs_delete, "Delete Jobs")
         else:
             print_jobs(jobs_active, "Active Jobs")
 elif (cmd == "status"):
@@ -825,7 +880,8 @@ elif (cmd == "status"):
             grunt_jobid = jb
             jr = find_job(jb)
             if jr is None:
-                continue  # shouldn't happen..
+                print("skipping non-active job: %s" % (jb))
+                continue
             sname = jr[1]
             ts = grunt_servers[sname]
             slist[sname] = ts
@@ -839,11 +895,16 @@ elif (cmd == "out"):
     job_args = glob_job_args(sys.argv[2:])
     for jb in job_args:
         grunt_jobid = jb
+        jdir = "active"
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            jr = find_other_job(jb)
+            if jr is None:
+                continue
+            jdir = jr[0]
+            jr = jr[1]
         ts = grunt_servers[jr[1]]
-        ts.print_job_out(grunt_jobid)
+        ts.print_job_out(jdir, grunt_jobid)
 elif (cmd == "ls" or cmd == "list"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
@@ -851,25 +912,47 @@ elif (cmd == "ls" or cmd == "list"):
     job_args = glob_job_args(sys.argv[2:])
     for jb in job_args:
         grunt_jobid = jb
+        jdir = "active"
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            jr = find_other_job(jb)
+            if jr is None:
+                continue
+            jdir = jr[0]
+            jr = jr[1]
         ts = grunt_servers[jr[1]]
-        ts.print_job_list(grunt_jobid)
+        ts.print_job_list(jdir, grunt_jobid)
 elif (cmd == "diff"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
         exit(1)
     jb = sys.argv[2]
+    jdir = "active"
     jr = find_job(jb)
     if jr is None:
-        print("diff: job not found:", jb)
-        exit(1)
+        jr = find_other_job(jb)
+        if jr is None:
+            print("diff: job not found:", jb)
+            exit(1)
+        else:
+            jdir = jr[0]
+            jr = jr[1]
     ts = grunt_servers[jr[1]]
     if len(sys.argv) == 4:
-        ts.diff_jobs(jb, sys.argv[3])
+        jb2 = sys.argv[3]
+        jr2 = find_job(jb2)
+        jdir2 = "active"
+        if jr2 is None:
+            jr2 = find_other_job(jb2)
+            if jr2 is None:
+                print("diff: job not found:", jb2)
+                exit(1)
+            else:
+                jdir2 = jr2[0]
+                jr2 = jr2[1]
+        ts.diff_jobs(jdir, jb, jdir2, jb2)
     else:
-        ts.diff_job(jb)
+        ts.diff_job(jdir, jb)
 elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
@@ -880,7 +963,8 @@ elif cmd == "nuke" or cmd == "archive" or cmd == "delete":
         grunt_jobid = jb
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            print("skipping non-active job: %s" % (jb))
+            continue
         sname = jr[1]
         ts = grunt_servers[sname]
         slist[sname] = ts
@@ -892,6 +976,10 @@ elif (cmd == "pull"):
     srv = def_server()
     print("pulling current results from: " + srv.results)
     srv.pull_results()
+elif (cmd == "clean"):
+    srv = def_server()
+    print("cleaning jobs dir: " + srv.jobs)
+    srv.clean_jobs()
 elif (cmd == "link"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
@@ -901,7 +989,8 @@ elif (cmd == "link"):
         grunt_jobid = jb
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            print("skipping non-active job: %s" % (jb))
+            continue
         sname = jr[1]
         ts = grunt_servers[sname]
         ts.link_results(grunt_jobid)
@@ -914,7 +1003,10 @@ elif (cmd == "unlink"):
         grunt_jobid = jb
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            jr = find_other_job(jb)
+            if jr is None:
+                continue  # shouldn't happen..
+            jr = jr[1]
         sname = jr[1]
         ts = grunt_servers[sname]
         ts.unlink_results(grunt_jobid)
@@ -945,7 +1037,8 @@ elif (cmd == "results"):
             grunt_jobid = jb
             jr = find_job(jb)
             if jr is None:
-                continue  # shouldn't happen..
+                print("skipping non-active job: %s" % (jb))
+                continue
             sname = jr[1]
             ts = grunt_servers[sname]
             slist[sname] = ts
@@ -1008,7 +1101,8 @@ else:
         grunt_jobid = jb
         jr = find_job(jb)
         if jr is None:
-            continue  # shouldn't happen..
+            print("skipping non-active job: %s" % (jb))
+            continue
         ts = grunt_servers[jr[1]]
         ts.write_cmd(grunt_jobid, cmd, timestamp())
     for sname, ts in slist.items():

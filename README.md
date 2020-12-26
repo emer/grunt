@@ -181,7 +181,7 @@ submit	 [args] -m 'message' 	 submits git controlled files in current dir to job
 	 you *must* have grunter.py script in the project dir to manage actual submission!
 	 see example in https://github.com/emer/grunt repository.
 
-jobs	 [active|done] 	 shows lists of all jobs, or specific subset
+jobs	 [active|done|archive|delete] 	 shows lists of all jobs, or specific subset
 	 (active = running, pending) -- ONLY reflects the last status results:
 	 do status to get latest job status from server, then jobs again in ~10 sec
 
