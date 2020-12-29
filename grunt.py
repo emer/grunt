@@ -93,7 +93,27 @@ def get_def_server():
                 print("and then create locally: grunt.py newproj " + grunt_proj + " username@server.at.univ.edu")
                 exit(1)
 
-def get_newproj_server():
+def save_def_server(cnm):
+    df = os.path.join(str(Path.home()), ".grunt.defserver")
+    with open(df, "w") as f:
+        f.write(cnm + "\n")
+
+def save_server(cnm):
+    df = "grunt.server"
+    with open(df, "w") as f:
+        f.write(cnm + "\n")
+
+def prompt_server_name():
+    cnm = str(input("Enter name of this server, saved in ~/.grunt.defserver: "))
+    save_def_server(cnm)
+    grunt_def_server = cnm
+
+def prompt_def_server():
+    cnm = str(input("Enter name of default server, saved in ~/.grunt.defserver: "))
+    save_def_server(cnm)
+    grunt_def_server = cnm
+
+def get_newproj_server(on_server):
     global grunt_def_server
     cf = "grunt.server"
     if open_servername(cf):
@@ -103,20 +123,10 @@ def get_newproj_server():
         if open_servername(df):
             print("server: " + grunt_def_server + " from: " + df)
         else:
-            print("Error: no servers found for this project")
-            print("you must first create on server using: grunt.py newproj " + grunt_proj)
-            print("and then create locally: grunt.py newproj " + grunt_proj + " username@server.at.univ.edu")
-            exit(1)
-
-def save_server(cnm):
-    df = "grunt.server"
-    with open(df, "w") as f:
-        f.write(cnm + "\n")
-
-def prompt_server():
-    cnm = str(input("enter name of server for this project: "))
-    save_server(cnm)
-    grunt_def_server = cnm
+            if on_server:
+                prompt_server_name()
+            else
+                prompt_def_server()
 
 def init_servers():
     get_projname()  # allow override with grunt.projname file
@@ -816,9 +826,10 @@ if (cmd == "newproj"):
         exit(1)
     projnm = sys.argv[2]
     remote = ""
-    get_newproj_server()
     if len(sys.argv) == 4:
         remote = sys.argv[3]
+    on_server = (remote == "")
+    get_newproj_server(on_server)
     init_repos(projnm, remote)
     exit(0)
 
