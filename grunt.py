@@ -93,6 +93,21 @@ def get_def_server():
                 print("and then create locally: grunt.py newproj " + grunt_proj + " username@server.at.univ.edu")
                 exit(1)
 
+def get_newproj_server():
+    global grunt_def_server
+    cf = "grunt.server"
+    if open_servername(cf):
+        print("server: " + grunt_def_server + " from: " + cf)
+    else:
+        df = os.path.join(str(Path.home()), ".grunt.defserver")
+        if open_servername(df):
+            print("server: " + grunt_def_server + " from: " + df)
+        else:
+            print("Error: no servers found for this project")
+            print("you must first create on server using: grunt.py newproj " + grunt_proj)
+            print("and then create locally: grunt.py newproj " + grunt_proj + " username@server.at.univ.edu")
+            exit(1)
+
 def save_server(cnm):
     df = "grunt.server"
     with open(df, "w") as f:
@@ -1078,7 +1093,7 @@ elif (cmd == "newproj"):
         exit(1)
     projnm = sys.argv[2]
     remote = ""
-    get_def_server()
+    get_newproj_server()
     if len(sys.argv) == 4:
         remote = sys.argv[3]
     init_repos(projnm, remote)
