@@ -125,7 +125,7 @@ def get_newproj_server(on_server):
         else:
             if on_server:
                 prompt_server_name()
-            else
+            else:
                 prompt_def_server()
 
 def init_servers():
