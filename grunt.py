@@ -176,7 +176,7 @@ def get_projname():
     cf = "grunt.projname"
     if open_projname(cf):
         print("using alt projname: " + grunt_proj + " from: " + cf)
-            
+
 def new_jobid():
     global grunt_jobnum, grunt_jobid
     jf = "nextjob.id"
@@ -250,6 +250,25 @@ def read_strings_strip(fnm):
         for i, v in enumerate(val):
             val[i] = v.rstrip()
     return val
+
+def write_strings_strip(fnm, lines):
+    s = "\n".join(lines)
+    with open(fnm,"w") as f:
+        f.write(s)
+
+def update_go_mod(fnm, proj):
+    # update_go_mod ensures that module line ends in proj.
+    # returns lines suitable for writing with write_strings_strip
+    lns = read_strings_strip(fnm)
+    pln = len(proj)
+    for i, ln in enumerate(lns):
+        if ln[:6] == "module":
+            eol = ln[-pln-1:]
+            if eol != "/" + proj:
+                ln = ln + "/" + proj
+                lns[i] = ln
+            break
+    return lns
     
 def utc_to_local(utc_dt):
     return utc_dt.replace(tzinfo=timezone.utc).astimezone(tz=None)    
@@ -289,6 +308,18 @@ def read_timestamp_to_local(fnm):
     if dt == None:
         return dstr
     return timestamp_local(dt)
+
+def find_file_up_dirs(fnm, path, maxup):
+    # find directory containing given file name, going up directories in path, up to given max levels up
+    # starts at path.  returns None if not found.
+    up = 0
+    cpath = path
+    while len(cpath) > 0 and up < maxup:
+        if fnm in os.listdir(cpath):
+            return cpath
+        (cpath, nn) = os.path.split(cpath)
+        up += 1
+    return None
     
 def argslist():
     # argslist returns post-command args as newline separated string 
@@ -626,9 +657,12 @@ class Server(object):
         p = subprocess.check_output(["git","ls-files"], universal_newlines=True)
         os.makedirs(new_job)
         gotGrunter = False
+        gotGoMod = False
         for f in p.splitlines():
             if f == "grunter.py":
                 gotGrunter = True
+            elif f == "go.mod":
+                gotGoMod = True
             dirnm = os.path.dirname(f)
             if dirnm:
                 jd = os.path.join(new_job,dirnm)
@@ -641,6 +675,15 @@ class Server(object):
             jf = os.path.join(new_job, f)
             shutil.copyfile(f, jf)
             self.jobs_repo.git.add(jf)
+        if not gotGoMod:
+            gmd = find_file_up_dirs("go.mod", os.getcwd(), 4)
+            if gmd is not None:
+                gf = os.path.join(gmd, "go.mod")
+                gml = update_go_mod(gf, grunt_proj)
+                jf = os.path.join(new_job, "go.mod")
+                write_strings_strip(jf, gml)
+                print("go.mod copied from: " + gf)
+                self.jobs_repo.git.add(jf)
 
     def print_job_out(self, jdir, jobid):
         job_out = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.out")
