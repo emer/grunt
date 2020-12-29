@@ -810,6 +810,18 @@ if len(sys.argv) < 2 or sys.argv[1] == "help":
 
 cmd = sys.argv[1]    
 
+if (cmd == "newproj"):
+    if len(sys.argv) < 3:
+        print("newproj command requires name of project")
+        exit(1)
+    projnm = sys.argv[2]
+    remote = ""
+    get_newproj_server()
+    if len(sys.argv) == 4:
+        remote = sys.argv[3]
+    init_repos(projnm, remote)
+    exit(0)
+
 # always list jobs regardless
 init_servers()
 list_jobs()
@@ -1087,16 +1099,6 @@ elif (cmd == "queue"):
     time.sleep(15)
     ts.pull_jobs()
     ts.print_job_file(grunt_jobid, "job.queue")
-elif (cmd == "newproj"):
-    if len(sys.argv) < 3:
-        print("newproj command requires name of project")
-        exit(1)
-    projnm = sys.argv[2]
-    remote = ""
-    get_newproj_server()
-    if len(sys.argv) == 4:
-        remote = sys.argv[3]
-    init_repos(projnm, remote)
 elif (cmd == "newproj-server"):
     srv = def_server()
     if len(sys.argv) < 3:
