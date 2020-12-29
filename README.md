@@ -8,30 +8,33 @@ See [grunti](https://github.com/emer/grunt/tree/master/grunti) directory for a G
 
 The central principles are:
 
-* There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
+* There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  This allows misc other temp result, doc, etc files to exist in the directory.  It also means that you should put any other files that are not essential for running the simulation in other directories.
+    + If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
 
-* Each project has its own grunt git repositories ( *entirely separate from your "local" e.g., github repository* ), on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  All repositories live under `~/grunt/`.
+* Each project has its own grunt git repositories ( *entirely separate from your "local" e.g., github repository* ), on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  All repositories (on server and client) live under `~/grunt/` -- *do not put this grunt code in that location!* -- we recommend `~/emer/grunt`.  There are two repositories per project:
+    + `jobs` contains all the job running and status files.  On the server, it is also where results are typically saved (log files etc), but they are not added to git.
+    + `results` contains the (subset of) job result files that you care about, which *are* added to git to make available for download (via `git pull`).  results is separate because it can be much larger than jobs -- you can regenerate a new results repo if it gets too big, while jobs should remain very small and can keep track of all jobs over time.
 
-* The primary function is to submit and manage **jobs**, by copying all the relevant source code (and anything else in the local git as shown by `git ls-files`) to a uniquely-named `jobid` directory under the `jobs` repository, and passing the `submit` command to the local `grunter.py` script ("extensible runner" -- this script is always copied whether it is under git control or not).  Typically this submit command submits a job to the server's `slurm` queue, but it can do anything you want.  As the job runs, it can produce **results** files, which can be pushed to a separate, parallel `results` repository, that can be pulled down to the client.
+* The primary function is to submit and manage **jobs**, by copying all the relevant source code (and anything else in the local git as shown by `git ls-files`) to a uniquely-named `jobid` directory under the `jobs` repository, and passing the `submit` command to the local `grunter.py` script (-er = "extensible runner" -- this script is always copied whether it is under git control or not).  Typically this submit command submits a job to the server's `slurm` queue, but it can do anything you want.  As the job runs, it can produce **results** files, which can be pushed to the separate, parallel `results` repository, that can be pulled down to the client.
 
 * The client `grunt.py` script communicates *core* commands to the `grund.py` daemon by pushing a `grcmd.<cmdname>` file.  Often the contents is just a timestamp, but could also be details needed for the command.  Other *user* commands are passed on to the user's `grunter.py` script, to support open-ended commands.  The core commands manage the full lifecycle of job and result management.
 
-* The `grunter.py` script ("extensible runner") in your local project source dir must support at least two commands: `submit` and `results` -- see the default version in the grunt source repo.  Submit starts the job on the server (e.g., generates a slurm sbatch file and calls `sbatch` on it), and `results` outputs a list of files (one per line) that should be copied over to the `results` repository (make sure no other debugging info is output for that command!).  The sample version also supports slurm `cancel` and `status` commands.
+* The `grunter.py` script in your local project source dir must support at least two commands: `submit` and `results` -- see the default version in the grunt source repo.  Submit starts the job on the server (e.g., generates a slurm sbatch file and calls `sbatch` on it), and `results` outputs a list of files (one per line) that should be copied over to the `results` repository (make sure no other debugging info is output for that command!).  The sample version also supports slurm `cancel` and `status` commands.
 
-* Any file named `job.*` is added to the `jobs` repository and pushed for every command -- use this to retrieve job state information (e.g., send slurm output to `job.out`, etc).  `job.submit`, `job.start` and `job.end` files are used conventionally to record timestamp for each such event.  `job.args` contains args for the job submission.
+* Any file named `job.*` is added to the `jobs` repository and pushed for every command -- use this to retrieve job state information (e.g., send slurm output to `job.out`, etc).  `job.submit`, `job.start` and `job.end` files are used conventionally to record timestamps for each such event.  `job.args` contains args for the job submission.
 
 # Install
 
-On both client and server (cluster) you first clone the repo wherever you want -- this example assumes you're using the rest of the emergent Go code -- it is convenient to have grunt in the same GOPATH location, and to also have a symbolic link in your home dir to emer if you don't already.  Also, it is *not* a good idea to clone into `~/grunt` as that will be the location of the grunt-controlled git repositories, so you don't want to end up with an outer git repository there.
+On both client and server (cluster) you first clone this grunt repo wherever you want (e.g., `~/emer/grunt`).  It is *not* a good idea to clone into `~/grunt` as that will be the location of the grunt-controlled git repositories, so you don't want to end up with this source code git repository there as well.
 
 ```bash
-$ cd ~/go/src/github.com/emer
+$ mkdir ~/emer
+$ cd ~/emer
 $ git clone https://github.com/emer/grunt.git
 $ cd ~
-$ ln -s go/src/github.com/emer .    # make a sym link to emer in your home dir for easy access
 ```
 
-and install `gitpython` package -- use the `--user` option on the server as you typically don't have sudo write ability.
+and then install `gitpython` package like this (use the `--user` option on the server as you typically don't have sudo write ability):
 
 ```bash
 $ pip3 install --user gitpython
@@ -112,17 +115,19 @@ Then you can do `screen` locally on your client, ssh into your server, and then 
 
 Each project has its own git repositories on the server, and working copies on the client (and server), that contain all the files for a given project.  These repositories are (wc = working copy):
 
-* `~/grunt/wc/server/username/projname/jobs`  -- contains the source code for each job and output as it runs -- this is where jobs are executed on server side.
+* `~/grunt/wc/server/username/projname/jobs` -- contains the source code for each job, job control commands (`grcmd.*`), job state output files (`job.*`) and job output as it runs -- this is where jobs are executed on server side.
 
 * `~/grunt/wc/server/username/projname/results` -- specified output files are copied over to this repository from the jobs dir, and you can `git pull` there to get the results back from server.
 
-The `server` is the name of the server, which is prompted when you create your first project, and then stored in `~/.grunt.defserver` -- if you have a `grunt.server` file in the current directory, the contents of that will override that.
+The `server` is the name of the server, which must be the first part of the hostname without the domain (e.g., for `hpc.myunit.university.edu` it is `hpc`), is prompted when you create your first project, and then stored in `~/.grunt.defserver` -- if you have a `grunt.server` file in the current directory, the contents of that will override that.
 
 The `projname` is the directory name where you execute the `grunt.py submit` job -- i.e., the directory for your simulation -- if you have a `grunt.projname` file in the current directory, the contents of that will override that.
 
-The server has the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
+## New Project
 
-* To initialize a new project on the **server**, run this command (can be done anywhere):
+The server hosts the "remote" git repository for your client, and thus you must first create the project repository on the server, and then when you create it on the client it links into that remote repository.
+
+* To initialize a new project on the **server**, run this command (where `grunt.py` code is, typically `~/emer/grunt`):
 
 ```bash
 $ python3 grunt.py newproj <projname>
@@ -134,7 +139,7 @@ $ python3 grunt.py newproj <projname>
 $ grunt newproj <projname> <username@server.at.university.edu>
 ```
 
-where the 3rd arg there is your user name and server -- you should be able to ssh with that combination and get into the server.
+where the 3rd arg there is your user name and server -- you must be able to ssh with that combination and get into the server.
 
 If this step fails (e.g., due to a typo etc), you will have to go to `~/grunt/wc/server/username` and remove the `<projname>` directory there before retrying.
 
@@ -266,7 +271,7 @@ Here are some tips for effective use of this tool:
 
 ## Recommended github project repository structure
 
-Because the grunt system is always copying all the files the current directory into the `jobs` directory for each `submit` command, including everything in subdirectories, it is a good idea to keep your other project-related files in other directories (e.g., good results you want to keep and analyze further, result plots, etc).  Just keep 
+Because the grunt system is always copying all the files the current directory into the `jobs` directory for each `submit` command, including everything in subdirectories, it is a good idea to keep your other project-related files in other directories (e.g., good results you want to keep and analyze further, result plots, etc).  Just keep the core source code needed to run the job in the project directory.  Here's the template organization we use:
 
 ```bash
 myproj
@@ -291,23 +296,12 @@ myproj
 
 # Troubleshooting
 
-* Use `grunt clean` if you end up with "ghost" jobs in Active list after deleting / nuking / archiving.  This does a git clean on the jobs git repo to remove any local files not in repo -- usually this fixes any issues. More rarely, you may need to do something manually in the local repo or even in the server one if something wasn't deleted properly.
+* Use `grunt clean` if you end up with "ghost" jobs in Active list after deleting / nuking / archiving.  This does a `git clean` on the jobs git repo to remove any local files not in repo -- usually this fixes any issues. More rarely, you may need to do something manually in the local repo or even in the server one if something wasn't deleted properly.
 
 * If you get mysterious git error messages, try running `git ls-files` and `git-status` etc to get more information and fix the issues -- the scripts just call git commands so you can use the command-line tool to better diagnose what is going on.  This may require you to ssh to the cluster and do `git status` etc commands on the `~/grunt/wc` directories.  In general you shouldn't touch the `bb` back-end barebones repositories -- use the wc working copy versions to update those.
 
 * If grunt pull isn't working check the list of results files in grunter.py that should be pulled.
 
-# TODO
 
-* how to gain access to other user's results?
 
-* save git hashes for various key commands like submit, update, delete -- issue is circularity -- these would only be avail on subsequent commit after that one.
-
-* undelete -- basically a git command that undoes the delete commit..
-
-* if grund_sub is still processing one command and another is checked in, it can fail to notice apparently.  but critically it doesn't lose that job -- just need to push another one to get it to register.  
-
-* daemon heartbeat timestamp to ensure that it is running -- like what we had in cluster run.  issue is that we don't have any fully general repo so we'd have to stick it in each jobs repo -- this suggests that maybe we do want to have a master 'grunt' project repo that is where all the general stuff goes, and is used for newproj-server.
-
-* it might get kinda slow checking a bunch of different project repos on grund, esp with a slow filesystem.
 
