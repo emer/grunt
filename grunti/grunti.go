@@ -399,6 +399,15 @@ func (gr *Grunt) Submit(args, message string) {
 	gr.TabView.SelectTabByName("Active")
 }
 
+// OpenDir opens job directory using default OS app (Finder / File Manager)
+func (gr *Grunt) OpenDir() {
+	jobs := gr.SelectedJobs(true) // need
+	if len(jobs) == 0 {
+		return
+	}
+	gr.RunGrunt("dir", jobs)
+}
+
 // Output shows output of selected job in Output tab
 func (gr *Grunt) Output() {
 	jobs := gr.SelectedJobs(true) // need
@@ -801,6 +810,11 @@ func (gr *Grunt) Config() *gi.Window {
 
 	tbar.AddSeparator("file-sep")
 
+	tbar.AddAction(gi.ActOpts{Label: "Open Dir", Icon: "folder", Tooltip: "open job directory in default OS app (Finder / File Manger)"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
+		gr.OpenDir()
+		tbar.UpdateActions()
+	})
+
 	tbar.AddAction(gi.ActOpts{Label: "Out", Icon: "info", Tooltip: "show output of selected job in Output tab"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Output()
 		gr.ShowOutput()
@@ -816,6 +830,8 @@ func (gr *Grunt) Config() *gi.Window {
 	tbar.AddAction(gi.ActOpts{Label: "Files", Icon: "file-download", Tooltip: "gets specific files as listed (space separated) into results, for files that are not automatically copied by grunter.py script -- use List to see list of files on server"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		giv.CallMethod(gr, "Files", vp)
 	})
+
+	tbar.AddSeparator("misc-sep")
 
 	tbar.AddAction(gi.ActOpts{Label: "Message", Icon: "edit", Tooltip: "edit the job message for one selected job"}, win.This(), func(recv, send ki.Ki, sig int64, data interface{}) {
 		gr.Message()

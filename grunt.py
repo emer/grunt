@@ -17,6 +17,7 @@ from pathlib import Path
 import getpass
 from datetime import datetime, timezone
 import csv
+import platform
 
 # maintains jobs from all servers, but uses the current default server
 # for all commands -- use "server" command to set default server
@@ -326,6 +327,15 @@ def argslist():
     # for use in command files
     return "\n".join(sys.argv[3:])
 
+def os_open_file(fn):
+    # open file using default OS 'open' / 'start' command
+    if platform.system() == 'Darwin':       # macOS
+        subprocess.call(('open', fn))
+    elif platform.system() == 'Windows':    # Windows
+        os.startfile(fn)
+    else:                                   # linux variants
+        subprocess.call(('xdg-open', fn))
+    
 def jobid_fm_jobs_list(lst):
     return lst[0]
     
@@ -685,6 +695,10 @@ class Server(object):
                 print("go.mod copied from: " + gf)
                 self.jobs_repo.git.add(jf)
 
+    def open_job_dir(self, jdir, jobid):
+        job_dir = os.path.join(self.jobs, jdir, jobid, grunt_proj)
+        os_open_file(job_dir)
+            
     def print_job_out(self, jdir, jobid):
         job_out = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.out")
         print("output from job: %s" % (job_out))
@@ -969,6 +983,23 @@ elif (cmd == "status"):
             ts.write_cmd(grunt_jobid, cmd, timestamp())
     for sname, ts in slist.items():
         ts.commit_cmd(cmd)
+elif (cmd == "dir"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    job_args = glob_job_args(sys.argv[2:])
+    for jb in job_args:
+        grunt_jobid = jb
+        jdir = "active"
+        jr = find_job(jb)
+        if jr is None:
+            jr = find_other_job(jb)
+            if jr is None:
+                continue
+            jdir = jr[0]
+            jr = jr[1]
+        ts = grunt_servers[jr[1]]
+        ts.open_job_dir(jdir, grunt_jobid)
 elif (cmd == "out"):
     if len(sys.argv) < 3:
         print(cmd + " requires jobs.. args")
