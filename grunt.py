@@ -752,6 +752,9 @@ class Server(object):
         endtime = read_timestamp(job_end)
         if endtime == None:
             write_string(job_end, timestamp()) # rewrite to avoid 
+            self.jobs_repo.git.add(job_end)
+            self.jobs_repo.git.commit('-am', "Add job.end file for done job: " + jobid)
+            self.jobs_repo.remotes.origin.push()
             return True
         if endtime > updtime:
             print("endtime: " + timestamp_fmt(endtime) + " > updtime: " + timestamp_fmt(updtime))
@@ -789,7 +792,7 @@ class Server(object):
         
     def commit_cmd(self, cmd):
         self.open_jobs()
-        self.jobs_repo.index.commit("Command: " + cmd)
+        self.jobs_repo.git.commit('-am', "Command: " + cmd)
         self.jobs_repo.remotes.origin.push()
     
     def write_commit_cmd(self, jobid, cmd, cmdstr):
@@ -921,7 +924,7 @@ if (cmd == "submit"):
             f.write(arg + "\n")
     srv.jobs_repo.git.add(os.path.join(new_job,'job.args'))
     srv.write_cmd(grunt_jobid, cmd, timestamp())
-    srv.jobs_repo.index.commit("Submit job: " + grunt_jobid + " " + message)
+    srv.jobs_repo.git.commit('-am', "Submit job: " + grunt_jobid + " " + message)
     srv.jobs_repo.remotes.origin.push()
 elif (cmd == "server"):
     if len(sys.argv) < 3:
@@ -943,7 +946,8 @@ elif (cmd == "message"):
     jdir = os.path.join(ts.active, jb, grunt_proj)
     jmsg = os.path.join(jdir, "job.message")
     write_string(jmsg, msg)
-    ts.jobs_repo.index.commit("Update message: " + jb + " " + msg)
+    ts.jobs_repo.git.add(jmsg)
+    ts.jobs_repo.git.commit('-am', "Update message: " + jb + " " + msg)
     ts.jobs_repo.remotes.origin.push()
 elif (cmd == "jobs"):
     srv = def_server() # pull jobs, update list
