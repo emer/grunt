@@ -41,10 +41,10 @@ cpus_per_task = 4
 tasks_per_node = 1
 
 # qos is the queue name
-# qos = "blanca-ccn"
+qos = "oreillylab"
 
 # qos short is short name for queue if name is cutoff
-# qos_short = "blanca-cc"
+# qos_short = "oreillyl"
 
 # in other cases, you might have to specify a partition
 partition = "low"
@@ -157,7 +157,7 @@ def write_sbatch():
     args = " ".join(read_strings_strip("job.args"))
     f = open('job.sbatch', 'w')
     f.write("#!/bin/bash -l\n")  # -l = login session, sources your .bash_profile
-    f.write("#SBATCH --mem=" + mem + "\n")
+    f.write("#SBATCH --mem-per-cpu=" + mem + "\n")  # zycyc, was mem
     f.write("#SBATCH --time=" + str(hours) + ":00:00\n")
     f.write("#SBATCH --ntasks=" + str(tasks) + "\n")
     f.write("#SBATCH --cpus-per-task=" + str(cpus_per_task) + "\n")
