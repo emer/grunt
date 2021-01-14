@@ -676,7 +676,7 @@ class Server(object):
             dirnm = os.path.dirname(f)
             if dirnm:
                 jd = os.path.join(new_job,dirnm)
-                os.makedirs(jd)
+                os.makedirs(jd, exist_ok=True)
             jf = os.path.join(new_job,f)
             shutil.copyfile(f, jf)
             self.jobs_repo.git.add(jf)
