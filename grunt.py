@@ -105,11 +105,13 @@ def save_server(cnm):
         f.write(cnm + "\n")
 
 def prompt_server_name():
+    global grunt_def_server
     cnm = str(input("Enter name of this server (just host name, no domain etc), saved in ~/.grunt.defserver: "))
     save_def_server(cnm)
     grunt_def_server = cnm
 
 def prompt_def_server():
+    global grunt_def_server
     cnm = str(input("Enter name of default server, saved in ~/.grunt.defserver: "))
     save_def_server(cnm)
     grunt_def_server = cnm
