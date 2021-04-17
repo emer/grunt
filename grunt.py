@@ -593,6 +593,7 @@ def init_repos(projnm, remote):
     # creates repositories for given project name
     # remote is remote origin username -- must create on server first
     # before creating locally!
+    global grunt_root
     if remote == "":
         grunt_root = os.path.join(str(Path.home()), "gruntsrv")
     wc = os.path.join(grunt_root, "wc", grunt_def_server, grunt_user, projnm)
@@ -628,7 +629,7 @@ def init_repos(projnm, remote):
         res_wc_repo.remotes.origin.push()
     else:
         user = remote.split("@")[0]
-        remote_url = remote + ":grunt/bb/" + grunt_def_server + "/" + user + "/" + projnm
+        remote_url = remote + ":gruntsrv/bb/" + grunt_def_server + "/" + user + "/" + projnm
         jobs_wc_repo = Repo.init(wc_jobs)
         res_wc_repo = Repo.init(wc_res)
         set_remote(jobs_wc_repo, remote_url + "/jobs")
