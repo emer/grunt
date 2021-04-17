@@ -82,9 +82,6 @@ if len(sys.argv) == 2 and sys.argv[1] == "reset":
             print("updated url to: " + url)
         grunt_results_repo.remotes.origin.pull()
         
-    # update all commit hashes to current head, to guarantee no stale jobs
-    for f in os.listdir(grunt_wc):
-        grunt_proj = os.path.join(grunt_wc,f)
         grunt_jobs = os.path.join(grunt_proj, "jobs")
         grunt_jobs_repo = 0
         try:
