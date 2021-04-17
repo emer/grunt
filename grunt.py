@@ -593,6 +593,8 @@ def init_repos(projnm, remote):
     # creates repositories for given project name
     # remote is remote origin username -- must create on server first
     # before creating locally!
+    if remote == "":
+        grunt_root = os.path.join(str(Path.home()), "gruntsrv")
     wc = os.path.join(grunt_root, "wc", grunt_def_server, grunt_user, projnm)
     
     if os.path.isdir(wc):
