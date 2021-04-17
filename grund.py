@@ -42,11 +42,11 @@ get_server()
 grunt_root = os.path.join(str(Path.home()), "gruntsrv")
 print ("grunt_root: " + grunt_root)
 
-if not os.path.isdir(grunt_proj_dir):
-    oldir = os.path.join(oldroot, "projs", grunt_proj)
-    if os.path.isdir(oldir):
-        print("renaming old server dir from: " + oldir + " to: " + grunt_proj_dir)
-        os.rename(oldir, grunt_proj_dir)
+if not os.path.isdir(grunt_root):
+    oldroot = os.path.join(str(Path.home()), "grunt")
+    if os.path.isdir(oldroot):
+        print("renaming old server dir from: " + oldroot + " to: " + grunt_root)
+        os.rename(oldroot, grunt_root)
 
 # grunt_user is user name
 grunt_user = getpass.getuser()
@@ -72,6 +72,13 @@ if len(sys.argv) == 2 and sys.argv[1] == "reset":
         except Exception as e:
             print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e), flush=True)
             exit(3)
+        url = grunt_jobs_repo.remotes.origin.url
+        print("url: " + url)
+        if "/grunt/bb/" in url:
+            url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+            with grunt_jobs_repo.remotes.origin.config_writer as cw:
+                cw.set("url", url)
+            print("updated url to: " + url)
         grunt_jobs_repo.remotes.origin.pull()
         grunt_jobs_shafn = os.path.join(grunt_jobs,"last_commit_done.sha")
         cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
