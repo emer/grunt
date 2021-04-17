@@ -1,6 +1,6 @@
 # this is the grunt git-based run daemon sub-script: https://github.com/emer/grunt
 # this is the inner-loop grunt daemon that is spawned by grund.py for each project working directory
-# it is passed the arg: ~/grunt/wc/server/username/projname to process
+# it is passed the arg: ~/gruntsrv/wc/server/username/projname to process
 
 from git import Repo
 import os
@@ -15,16 +15,16 @@ import csv
 # turn this on to see more verbose debug messages
 grunt_debug = False
 
-# grunt_wc is the working dir for project: ~/grunt/wc/server/username/projname
+# grunt_wc is the working dir for project: ~/gruntsrv/wc/server/username/projname
 grunt_wc = ""
 
-# grunt_jobs is the jobs git working dir for project: ~/grunt/wc/server/username/projname/jobs
+# grunt_jobs is the jobs git working dir for project: ~/gruntsrv/wc/server/username/projname/jobs
 grunt_jobs = ""
 
 # grunt_jobs_repo is active git repo handle
 grunt_jobs_repo = 0
 
-# grunt_results is the jobs git working dir for project: ~/grunt/wc/server/username/projname/results
+# grunt_results is the jobs git working dir for project: ~/gruntsrv/wc/server/username/projname/results
 grunt_results = ""
 
 # grunt_results_repo is active git repo handle
@@ -324,7 +324,7 @@ def commit_results():
 #  starts running here    
     
 if len(sys.argv) != 2:
-    print("usage: grund_sub.py ~/grunt/wc/server/username/projname", flush=True)
+    print("usage: grund_sub.py ~/gruntsrv/wc/server/username/projname", flush=True)
     print("  1 argument needed, but " + str(len(sys.argv) - 1) + " given", flush=True)
     exit(1)
 elif os.path.isdir(sys.argv[1]):

@@ -39,8 +39,14 @@ get_server()
             
 # grunt_root is ~/grunt
 # you can symlink ~/grunt somewhere else if you want but let's keep it simple
-grunt_root = os.path.join(str(Path.home()), "grunt")
+grunt_root = os.path.join(str(Path.home()), "gruntsrv")
 print ("grunt_root: " + grunt_root)
+
+if not os.path.isdir(grunt_proj_dir):
+    oldir = os.path.join(oldroot, "projs", grunt_proj)
+    if os.path.isdir(oldir):
+        print("renaming old server dir from: " + oldir + " to: " + grunt_proj_dir)
+        os.rename(oldir, grunt_proj_dir)
 
 # grunt_user is user name
 grunt_user = getpass.getuser()

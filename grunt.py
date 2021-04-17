@@ -29,9 +29,9 @@ grunt_servers = {}
 # grunt_def_server is default server name -- default is in ~/.grunt.defserver
 grunt_def_server = ""
 
-# grunt_root is ~/grunt
-# you can symlink ~/grunt somewhere else if you want but let's keep it simple
-grunt_root = os.path.join(str(Path.home()), "grunt")
+# grunt_root is ~/gruntdat
+# you can symlink ~/gruntdat somewhere else if you want but let's keep it simple
+grunt_root = os.path.join(str(Path.home()), "gruntdat")
 # print ("grunt_root: " + grunt_root)
 
 # grunt_user is user name
@@ -137,7 +137,13 @@ def init_servers():
     global grunt_proj_dir
     grunt_proj_dir = os.path.join(grunt_root, "projs", grunt_proj)
     if not os.path.isdir(grunt_proj_dir):
-        os.makedirs(grunt_proj_dir)
+        oldroot = os.path.join(str(Path.home()), "grunt")
+        oldir = os.path.join(oldroot, "projs", grunt_proj)
+        if os.path.isdir(oldir):
+            print("renaming old root dir from: " + oldir + " to: " + grunt_proj_dir)
+            os.rename(oldir, grunt_proj_dir)
+        else:
+            os.makedirs(grunt_proj_dir)
     maxjob = 0
     for f in os.listdir(wc):
         swc = os.path.join(wc, f, grunt_user, grunt_proj)
@@ -146,6 +152,7 @@ def init_servers():
         srv = Server(f)
         grunt_servers[f] = srv
         maxjob = max(maxjob, srv.old_jobnum)
+        
     # legacy: get nextjob from server, now stored in projs directory
     jf = "nextjob.id"
     pjf = os.path.join(grunt_proj_dir, jf)
