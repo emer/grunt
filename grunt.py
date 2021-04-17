@@ -138,10 +138,9 @@ def init_servers():
     grunt_proj_dir = os.path.join(grunt_root, "projs", grunt_proj)
     if not os.path.isdir(grunt_proj_dir):
         oldroot = os.path.join(str(Path.home()), "grunt")
-        oldir = os.path.join(oldroot, "projs", grunt_proj)
-        if os.path.isdir(oldir):
-            print("renaming old root dir from: " + oldir + " to: " + grunt_proj_dir)
-            os.rename(oldir, grunt_proj_dir)
+        if os.path.isdir(oldroot):
+            print("renaming old root dir from: " + oldroot + " to: " + grunt_root)
+            os.rename(oldroot, grunt_root)
             update_server_urls()
         else:
             os.makedirs(grunt_proj_dir)
@@ -170,11 +169,11 @@ def init_servers():
 def update_server_urls():
     # update server remote urls -- renaming dir
     wc = os.path.join(grunt_root, "wc")
-    for f in os.listdir(wc):
-        swc = os.path.join(wc, f, grunt_user)
+    for srv in os.listdir(wc):
+        swc = os.path.join(wc, srv, grunt_user)
         for pr in os.listdir(swc):
-            swc = os.path.join(wc, f, grunt_user)
-            grunt_results = os.path.join(pr, "results")
+            pwc = os.path.join(swc, pr)
+            grunt_results = os.path.join(pwc, "results")
             grunt_results_repo = 0
             try:
                 grunt_results_repo = Repo(grunt_results)
@@ -183,13 +182,13 @@ def update_server_urls():
                 exit(3)
             url = grunt_results_repo.remotes.origin.url
             print("url: " + url)
-            if "/grunt/bb/" in url:
-                url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+            if ":grunt/bb/" in url:
+                url = url.replace(":grunt/bb/", ":gruntsrv/bb/")
                 with grunt_results_repo.remotes.origin.config_writer as cw:
                     cw.set("url", url)
                     print("updated url to: " + url)
         
-            grunt_jobs = os.path.join(pr, "jobs")
+            grunt_jobs = os.path.join(pwc, "jobs")
             grunt_jobs_repo = 0
             try:
                 grunt_jobs_repo = Repo(grunt_jobs)
@@ -198,8 +197,8 @@ def update_server_urls():
                 exit(3)
             url = grunt_jobs_repo.remotes.origin.url
             print("url: " + url)
-            if "/grunt/bb/" in url:
-                url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+            if ":grunt/bb/" in url:
+                url = url.replace(":grunt/bb/", ":gruntsrv/bb/")
                 with grunt_jobs_repo.remotes.origin.config_writer as cw:
                     cw.set("url", url)
                     print("updated url to: " + url)
