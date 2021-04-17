@@ -62,6 +62,26 @@ if len(sys.argv) == 2 and sys.argv[1] == "reset":
     fnm = "nohup.out"
     if os.path.isfile(fnm):
         os.remove(fnm)
+
+    # look for remote dirs that might have old url
+    for f in os.listdir(grunt_wc):
+        grunt_proj = os.path.join(grunt_wc,f)
+        grunt_results = os.path.join(grunt_proj, "results")
+        grunt_results_repo = 0
+        try:
+            grunt_results_repo = Repo(grunt_results)
+        except Exception as e:
+            print("The directory provided is not a valid grunt results git working directory: " + grunt_results + "! " + str(e), flush=True)
+            exit(3)
+        url = grunt_results_repo.remotes.origin.url
+        # print("url: " + url)
+        if "/grunt/bb/" in url:
+            url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+            with grunt_results_repo.remotes.origin.config_writer as cw:
+                cw.set("url", url)
+            print("updated url to: " + url)
+        grunt_results_repo.remotes.origin.pull()
+        
     # update all commit hashes to current head, to guarantee no stale jobs
     for f in os.listdir(grunt_wc):
         grunt_proj = os.path.join(grunt_wc,f)
@@ -70,10 +90,10 @@ if len(sys.argv) == 2 and sys.argv[1] == "reset":
         try:
             grunt_jobs_repo = Repo(grunt_jobs)
         except Exception as e:
-            print("The directory provided is not a valid grunt jobs git working directory: " + grunt_wc + "! " + str(e), flush=True)
+            print("The directory provided is not a valid grunt jobs git working directory: " + grunt_jobs + "! " + str(e), flush=True)
             exit(3)
         url = grunt_jobs_repo.remotes.origin.url
-        print("url: " + url)
+        # print("url: " + url)
         if "/grunt/bb/" in url:
             url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
             with grunt_jobs_repo.remotes.origin.config_writer as cw:

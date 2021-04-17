@@ -142,6 +142,7 @@ def init_servers():
         if os.path.isdir(oldir):
             print("renaming old root dir from: " + oldir + " to: " + grunt_proj_dir)
             os.rename(oldir, grunt_proj_dir)
+            update_server_urls()
         else:
             os.makedirs(grunt_proj_dir)
     maxjob = 0
@@ -165,6 +166,44 @@ def init_servers():
             with open(pjf, "w") as f:
                 f.write(str(maxjob) + "\n")
 
+                
+def update_server_urls():
+    # update server remote urls -- renaming dir
+    wc = os.path.join(grunt_root, "wc")
+    for f in os.listdir(wc):
+        swc = os.path.join(wc, f, grunt_user)
+        for pr in os.listdir(swc):
+            swc = os.path.join(wc, f, grunt_user)
+            grunt_results = os.path.join(pr, "results")
+            grunt_results_repo = 0
+            try:
+                grunt_results_repo = Repo(grunt_results)
+            except Exception as e:
+                print("The directory provided is not a valid grunt results git working directory: " + grunt_results + "! " + str(e), flush=True)
+                exit(3)
+            url = grunt_results_repo.remotes.origin.url
+            print("url: " + url)
+            if "/grunt/bb/" in url:
+                url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+                with grunt_results_repo.remotes.origin.config_writer as cw:
+                    cw.set("url", url)
+                    print("updated url to: " + url)
+        
+            grunt_jobs = os.path.join(pr, "jobs")
+            grunt_jobs_repo = 0
+            try:
+                grunt_jobs_repo = Repo(grunt_jobs)
+            except Exception as e:
+                print("The directory provided is not a valid grunt jobs git working directory: " + grunt_jobsc + "! " + str(e), flush=True)
+                exit(3)
+            url = grunt_jobs_repo.remotes.origin.url
+            print("url: " + url)
+            if "/grunt/bb/" in url:
+                url = url.replace("/grunt/bb/", "/gruntsrv/bb/")
+                with grunt_jobs_repo.remotes.origin.config_writer as cw:
+                    cw.set("url", url)
+                    print("updated url to: " + url)
+                
 def def_server():
     # returns default server, after first doing jobs pull so ready to go
     get_def_server()
