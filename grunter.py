@@ -48,7 +48,6 @@ qos_short = "blanca-cc"
 # in other cases, you might have to specify a partition
 # partition = "low"
 
-
 ##############################################################
 # main vars
 

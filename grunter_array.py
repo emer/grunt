@@ -54,6 +54,7 @@ array = "0-9"
 
 # number of emergent runs per arrray job 
 runs = 1
+
 ##############################################################
 # main vars
 
@@ -153,7 +154,6 @@ def write_sbatch():
     f.write("#SBATCH --array=" + array + "\n")
     f.write("#SBATCH --qos=" + qos + "\n")
     # f.write("#SBATCH --partition=" + partition + "\n")
-    f.write("#SBATCH --output=job.out\n")
     f.write("#SBATCH --mail-type=FAIL\n")
     f.write("#SBATCH --mail-user=" + grunt_user + "\n")
     f.write("#SBATCH --output=job.%A_%a.out\n")
