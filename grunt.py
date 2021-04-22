@@ -1247,6 +1247,16 @@ elif (cmd == "newproj-server"):
     projnm = sys.argv[2]
     print("using jobid: " + grunt_jobid + " to create project: " + projnm + " on server")
     srv.write_commit_cmd(grunt_jobid, cmd, projnm)
+elif (cmd == "etcat"):
+    if len(sys.argv) < 3:
+        print(cmd + " requires jobs.. args")
+        exit(1)
+    job_args = glob_job_args(sys.argv[2:])
+    for jb in job_args:
+        try:
+            result = subprocess.check_output(["python3", "grunter.py", "etcat", jb], universal_newlines=True)
+        except subprocess.CalledProcessError:
+            print("Failed to run grunter.py etcat")
 else:
     # generic command -- just pass onto server
     slist = {}
