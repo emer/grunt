@@ -8,7 +8,7 @@
 # ~/grunt/wc/server/username/projname/jobs/active/jobid/projname
 #
 # this sample version includes slurm status and cancel commands and is used for
-# parallel batch submissions
+# launching multiple jobs in parallel (array jobs)
 
 import sys
 import os
@@ -22,6 +22,9 @@ import getpass
 
 ##############################################################
 # key job parameters here, used in writing the job.sbatch
+
+# IMPORTANT: see write_sbatch* methods below for additional necessary changes!
+# also results command may need to be updated too.
 
 # max number of hours -- slurm will terminate if longer, so be generous
 # 2d = 48, 3d = 72, 4d = 96, 5d = 120, 6d = 144, 7d = 168
@@ -151,29 +154,32 @@ def read_timestamp_to_local(fnm):
     
 # write_sbatch writes the job submission script: job.sbatch
 
-#write_sbatch_headers defines the sbatch parameterrs shared accross startup, cleanup and main array jobs
+# write_sbatch_headers defines the sbatch parameters shared across startup,
+# cleanup and main array jobs
 def write_sbatch_header(f):
-    
     f.write("#SBATCH --job-name=" + grunt_proj + "_" + grunt_jobid + "\n")
     f.write("#SBATCH --mem=" + mem + "\n")
+    # f.write("#SBATCH --mem-per-cpu=" + mem + "\n")  # this may be needed on some systems, with mpi
     f.write("#SBATCH --time=" + str(hours) + ":00:00\n") 
+    f.write("#SBATCH --ntasks=" + str(tasks) + "\n")
     f.write("#SBATCH --cpus-per-task=" + str(cpus_per_task) + "\n")
+    f.write("#SBATCH --ntasks-per-node=" + str(tasks_per_node) + "\n")
     f.write("#SBATCH --qos=" + qos + "\n")
-    #f.write("#SBATCH --partition=" + partition + "\n")
+    # f.write("#SBATCH --partition=" + partition + "\n")
     f.write("#SBATCH --mail-type=FAIL\n")
     f.write("#SBATCH --mail-user=" + grunt_user + "\n")
     # these might be needed depending on environment in head node vs. compute nodes
     # f.write("#SBATCH --export=NONE\n")
     # f.write("unset SLURM_EXPORT_ENV\n")
     
-#This job is a singelton job before launching the main arrray job used to setup the array job
+# This job is a singelton job before launching the main arrray job used to setup the array job
 # such as compiling the code, or other setup work that should only run once per array job
 def write_sbatch_setup():
     args = " ".join(read_strings_strip("job.args"))
     f = open('job.setup.sbatch', 'w')
     f.write("#!/bin/bash -l\n")  # -l = login session, sources your .bash_profile
     f.write("#SBATCH --output=job.%A.setup.out\n")
-    f.write("#SBATCH --error=job.%A.setup.error\n")
+    # f.write("#SBATCH --error=job.%A.setup.err\n") # if not enabled, out and err go to .out
     write_sbatch_header(f)
 
     ####################################################################
@@ -193,8 +199,9 @@ def write_sbatch_array(setup_id):
     f.write("#!/bin/bash -l\n")  # -l = login session, sources your .bash_profile
     f.write("#SBATCH --array=" + array + "\n")
     f.write("#SBATCH --output=job.%A_%a.out\n")
-    f.write("#SBATCH --error=job.%A_%a.error\n")
-    f.write("#SBATCH --dependency=afterany:" + str(setup_id) + "\n") #Only run the main array job once the setup job has completed
+    # f.write("#SBATCH --error=job.%A_%a.err\n") # if not enabled, out and err go to .out
+    f.write("#SBATCH --dependency=afterany:" + str(setup_id) + "\n")
+    # Key line above: Only run the main array job once the setup job has completed
     write_sbatch_header(f)
 
     ####################################################################
@@ -213,8 +220,9 @@ def write_sbatch_cleanup(array_id):
     f = open('job.cleanup.sbatch', 'w')
     f.write("#!/bin/bash -l\n")  # -l = login session, sources your .bash_profile
     f.write("#SBATCH --output=job.%A.cleanup.out\n")
-    f.write("#SBATCH --error=job.%A.cleanup.error\n")
+    # f.write("#SBATCH --error=job.%A.cleanup.err\n") # if not enabled, out and err go to .out
     f.write("#SBATCH --dependency=afterany:" + str(array_id) + "\n")
+    # Key line above: only run cleanup after array job
     write_sbatch_header(f)
 
     ####################################################################

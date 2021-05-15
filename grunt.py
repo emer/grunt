@@ -14,6 +14,7 @@ from subprocess import Popen, PIPE
 import shutil
 import json
 from pathlib import Path
+import glob
 import getpass
 from datetime import datetime, timezone
 import csv
@@ -750,11 +751,23 @@ class Server(object):
         os_open_file(job_dir)
             
     def print_job_out(self, jdir, jobid):
-        job_out = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.out")
-        print("output from job: %s" % (job_out))
-        out = read_strings(job_out)
-        print("".join(out))
-        print()
+        job_err = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job*.err*")
+        fl = glob.glob(job_err)
+        for f in fl:
+            print("####################################################################")
+            print("job error file: %s" % (f))
+            err = read_strings(f)
+            print("".join(err))
+            print()
+            
+        job_out = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job*.out")
+        fl = glob.glob(job_out)
+        for f in fl:
+            print("####################################################################")
+            print("job output file: %s" % (f))
+            out = read_strings(f)
+            print("".join(out))
+            print()
             
     def print_job_list(self, jdir, jobid):
         job_ls = os.path.join(self.jobs, jdir, jobid, grunt_proj, "job.list")

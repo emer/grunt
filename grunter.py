@@ -22,6 +22,9 @@ import getpass
 ##############################################################
 # key job parameters here, used in writing the job.sbatch
 
+# IMPORTANT: see write_sbatch method below for additional necessary changes!
+# also results command may need to be updated too.
+
 # max number of hours -- slurm will terminate if longer, so be generous
 # 2d = 48, 3d = 72, 4d = 96, 5d = 120, 6d = 144, 7d = 168
 hours = 24  
