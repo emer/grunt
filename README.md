@@ -6,7 +6,111 @@ The remote machine (e.g., a compute server) hosts the git repository, which is a
 
 See [grunti](https://github.com/emer/grunt/tree/master/grunti) directory for a GUI interface written in Go, which makes usage considerably simpler than the command line.
 
-The central principles are:
+# Cheat sheet of commands
+
+## Server
+
+Start server daemon:
+```bash
+$ nohup python3 grund.py &
+```
+
+Monitor output:
+```bash
+$ tail -f nohup.out
+```
+
+Reset after server killed / dies:
+```bash
+$ python3 grund.py reset
+```
+
+Create new project on server:
+```bash
+$ python3 grunt.py newproj <projname>
+```
+
+## Client
+
+```bash
+$ grunt newproj <projname> <username@server.at.university.edu>
+```
+
+See [windows](#windows) for windows setup below.
+
+type `grunt help` to see docs for all the commands:
+
+```
+usage: pass commands with args as follows:
+	 <jobid..> can include space-separated list and [job0000]11..22 range expressions
+	 end number is *inclusive*!  prefix is optional
+
+uses grunt.server for commands, but lists jobs for all servers -- use server to set
+
+server	 name 	 sets server to given server name -- will be used for all commands
+
+submit	 [args] -m 'message' 	 submits git controlled files in current dir to jobs working dir:
+	 ~/gruntdat/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
+	 which grunter.py script uses for passing args to job -- must pass message as last arg!
+	 git commit triggers update of server git repo, and grund daemon then submits the new job.
+	 you *must* have grunter.py script in the project dir to manage actual submission!
+	 see example in https://github.com/emer/grunt repository.
+
+jobs	 [active|done|archive|delete] 	 shows lists of all jobs, or specific subset
+	 (active = running, pending) -- ONLY reflects the last status results:
+	 do status to get latest job status from server, then jobs again in ~10 sec
+
+status	 [jobid] 	 pings the server to check status and update job status files
+	 on all active (running and pending) jobs if no job specified -- use jobs to see results
+
+results	 <jobid..> 	 push current job results to results git repository
+	 the specific files to get are returned by the result() function in grunter.py
+	 with no jobid it gets results on all running jobs.
+	 automatically does link on jobs to make easy to access from orig source.
+
+files	 jobid [files..] 	 push given files for given job to results git repository
+	 automatically does link on jobs to make easy to access from orig source.
+
+pull	 grab any updates to jobs and results repos (done for any cmd)
+
+out	 <jobid..> 	 displays the job.out output for given job(s)
+
+ls	 <jobid..> 	 displays the job.list file list for given job(s)
+
+message	 jobid 'message' 	 write a new job.message for given job
+
+diff	 <jobid1> [jobid2] 	 displays the diffs between either given job and current
+	 directory, or between two jobs directories
+
+link	 <jobid..> 	 make symbolic links into local gresults/jobid for job results
+	 this makes it easier to access the results -- this happens automatically in results cmd
+
+cancel	 <jobid..> 	 cancel job on server
+
+nuke	 <jobid..> 	 deletes given job directory (jobs and results) -- use carefully!
+	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
+
+delete	 <jobid..> 	 moves job directory from active to delete subdir, deletes results
+	 useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
+
+archive	 <jobid..> 	 moves job directory from active to archive subdir
+	 useful for removing clutter from active, and preserving important but non-current results
+
+clean	 cleans the job git directory -- if any strange ghost jobs appear in listing, do this
+	 this deletes any files that are present locally but not remotely -- should be safe for jobs
+	 except if in the process of running a command, so just wait until all current activity is done
+
+queue	 calls queue command in grunter.py, prints resulting job.queue file
+
+newproj	 <projname> [remote-url] 	 creates new project repositories -- for use on both server
+	 and client -- on client you should specify the remote-url arg which should be:
+	 just your username and server name on server: username@server.my.university.edu
+
+newproj-server	 <projname> 	 calls: newproj projname on server -- use in existing proj
+	 to create a new project
+```
+
+# Overview
 
 * There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  This allows misc other temp result, doc, etc files to exist in the directory.  It also means that you should put any other files that are not essential for running the simulation in other directories.
     + If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
@@ -166,80 +270,6 @@ You can have the script `cd` into a subdirectory and run a project from there, t
 
 Also, if there are any "external" resources that your job needs (e.g., large shared databases of image files), you should just write a command in your sbatch script to make a symbolic link to the relevant directory ( *on the server* ), and then have your project refer "locally" to that symlinked directory -- you can also manually create the same symlink on your client, so the code will run the same in both places, and others can use it too, without baking in a specific path in the code.
 
-# Usage
-
-type `grunt help` to see docs for all the commands:
-
-```
-usage: pass commands with args as follows:
-	 <jobid..> can include space-separated list and [job0000]11..22 range expressions
-	 end number is *inclusive*!  prefix is optional
-
-uses grunt.server for commands, but lists jobs for all servers -- use server to set
-
-server	 name 	 sets server to given server name -- will be used for all commands
-
-submit	 [args] -m 'message' 	 submits git controlled files in current dir to jobs working dir:
-	 ~/gruntdat/wc/username/projdir/jobs/active/jobid -- also saves option args to job.args
-	 which grunter.py script uses for passing args to job -- must pass message as last arg!
-	 git commit triggers update of server git repo, and grund daemon then submits the new job.
-	 you *must* have grunter.py script in the project dir to manage actual submission!
-	 see example in https://github.com/emer/grunt repository.
-
-jobs	 [active|done|archive|delete] 	 shows lists of all jobs, or specific subset
-	 (active = running, pending) -- ONLY reflects the last status results:
-	 do status to get latest job status from server, then jobs again in ~10 sec
-
-status	 [jobid] 	 pings the server to check status and update job status files
-	 on all active (running and pending) jobs if no job specified -- use jobs to see results
-
-results	 <jobid..> 	 push current job results to results git repository
-	 the specific files to get are returned by the result() function in grunter.py
-	 with no jobid it gets results on all running jobs.
-	 automatically does link on jobs to make easy to access from orig source.
-
-files	 jobid [files..] 	 push given files for given job to results git repository
-	 automatically does link on jobs to make easy to access from orig source.
-
-pull	 grab any updates to jobs and results repos (done for any cmd)
-
-out	 <jobid..> 	 displays the job.out output for given job(s)
-
-ls	 <jobid..> 	 displays the job.list file list for given job(s)
-
-message	 jobid 'message' 	 write a new job.message for given job
-
-diff	 <jobid1> [jobid2] 	 displays the diffs between either given job and current
-	 directory, or between two jobs directories
-
-link	 <jobid..> 	 make symbolic links into local gresults/jobid for job results
-	 this makes it easier to access the results -- this happens automatically in results cmd
-
-cancel	 <jobid..> 	 cancel job on server
-
-nuke	 <jobid..> 	 deletes given job directory (jobs and results) -- use carefully!
-	 useful for mistakes etc -- better to use delete for no-longer-relevant but valid jobs
-
-delete	 <jobid..> 	 moves job directory from active to delete subdir, deletes results
-	 useful for removing clutter of no-longer-relevant jobs, while retaining a record just in case
-
-archive	 <jobid..> 	 moves job directory from active to archive subdir
-	 useful for removing clutter from active, and preserving important but non-current results
-
-clean	 cleans the job git directory -- if any strange ghost jobs appear in listing, do this
-	 this deletes any files that are present locally but not remotely -- should be safe for jobs
-	 except if in the process of running a command, so just wait until all current activity is done
-
-queue	 calls queue command in grunter.py, prints resulting job.queue file
-
-newproj	 <projname> [remote-url] 	 creates new project repositories -- for use on both server
-	 and client -- on client you should specify the remote-url arg which should be:
-	 just your username and server name on server: username@server.my.university.edu
-
-newproj-server	 <projname> 	 calls: newproj projname on server -- use in existing proj
-	 to create a new project
-```
-
 # Details
 
 ## Standard job.* files
@@ -293,7 +323,6 @@ myproj
       myproj-v2
 ```
 
-
 # Troubleshooting
 
 * Use `grunt clean` if you end up with "ghost" jobs in Active list after deleting / nuking / archiving.  This does a `git clean` on the jobs git repo to remove any local files not in repo -- usually this fixes any issues. More rarely, you may need to do something manually in the local repo or even in the server one if something wasn't deleted properly.
@@ -302,4 +331,15 @@ myproj
 
 * If grunt pull isn't working check the list of results files in grunter.py that should be pulled.
 
+# Windows
+
+As usual, Microsoft Windows is different -- here's some tips for configuring the client to work on windows.
+
+* Install `python` and `git` from standard sources (todo: where to get?)
+
+* Create a `grunt.bat` file in a location on your `PATH` where executable files can be found, replacing the paths here with those where your relevant code was installed:
+
+```bat
+"C:\Program Files\Python37\python" C:\GoModules\src\github.com\emer\grunt\grunt.py %*
+```
 
