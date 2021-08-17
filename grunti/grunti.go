@@ -41,25 +41,43 @@ func guirun() {
 	win.StartEventLoop()
 }
 
+// Table contains all the info for one table of job info
+type Table struct {
+	Table *etable.Table     `desc:"jobs table"`
+	View  *etview.TableView `desc:"view of table"`
+	Sels  []string          `desc:"selected job ids in ascending order in view"`
+}
+
+// Tables are different types / locations of random noise for activations
+type Tables int
+
+//go:generate stringer -type=Tables
+
+var KiT_Tables = kit.Enums.AddEnum(TablesN, kit.NotBitFlag, nil)
+
+func (ev Tables) MarshalJSON() ([]byte, error)  { return kit.EnumMarshalJSON(ev) }
+func (ev *Tables) UnmarshalJSON(b []byte) error { return kit.EnumUnmarshalJSON(ev, b) }
+
+const (
+	Active Tables = iota
+	Done
+	Archive
+	Delete
+	TablesN
+)
+
 // Grunt interfaces with grunt commands
 type Grunt struct {
-	StatMsg     string            `desc:"last status message"`
-	Server      string            `desc:"current server"`
-	Params      Params            `desc:"params per project, saved as grunti.pars"`
-	ResList     Results           `desc:"list of loaded results"`
-	Active      *etable.Table     `desc:"jobs table"`
-	Done        *etable.Table     `desc:"jobs table"`
-	Archive     *etable.Table     `desc:"jobs table"`
-	Delete      *etable.Table     `desc:"jobs table"`
-	ActView     *etview.TableView `desc:"table view"`
-	DoneView    *etview.TableView `desc:"table view"`
-	ArchiveView *etview.TableView `desc:"table view"`
-	DeleteView  *etview.TableView `desc:"table view"`
-	OutView     *giv.TextView     `desc:"text view"`
-	OutBuf      *giv.TextBuf      `desc:"text buf"`
-	ResView     *giv.TableView    `desc:"results table"`
-	Plot        *eplot.Plot2D     `desc:"plot"`
-	AggRes      *etable.Table     `desc:"aggregated results from multiple"`
+	StatMsg string          `desc:"last status message"`
+	Server  string          `desc:"current server"`
+	Params  Params          `desc:"params per project, saved as grunti.pars"`
+	ResList Results         `desc:"list of loaded results"`
+	Tables  [TablesN]*Table `desc:"the jobs tables"`
+	OutView *giv.TextView   `desc:"text view"`
+	OutBuf  *giv.TextBuf    `desc:"text buf"`
+	ResView *giv.TableView  `desc:"results table"`
+	Plot    *eplot.Plot2D   `desc:"plot"`
+	AggRes  *etable.Table   `desc:"aggregated results from multiple"`
 
 	DirName   string        `view:"-" desc:"path/dir for current project"`
 	StatLabel *gi.Label     `view:"-" desc:"status label"`
@@ -84,14 +102,12 @@ var TheGrunt Grunt
 func (gr *Grunt) New() {
 	gr.Params.Defaults()
 	gr.Params.Open()
-	gr.Active = &etable.Table{}
-	gr.Done = &etable.Table{}
-	gr.Archive = &etable.Table{}
-	gr.Delete = &etable.Table{}
-	gr.ConfigJobTable(gr.Active)
-	gr.ConfigJobTable(gr.Done)
-	gr.ConfigJobTable(gr.Archive)
-	gr.ConfigJobTable(gr.Delete)
+	for i := range gr.Tables {
+		tb := &Table{}
+		gr.Tables[i] = tb
+		tb.Table = &etable.Table{}
+		gr.ConfigJobTable(tb.Table)
+	}
 	gr.ResList = make(Results, 0)
 	gr.ResList = append(gr.ResList, &Result{}) // dummy
 }
@@ -101,12 +117,19 @@ func (gr *Grunt) ConfigJobTable(dt *etable.Table) {
 	dt.SetMetaData("Message:width", "80")
 }
 
+// SaveSels saves current selections
+func (gr *Grunt) SaveSels() {
+	for _, tb := range gr.Tables {
+		tb.Sels = gr.SelectedJobsView(tb.View, false)
+	}
+}
+
 // OpenJobs opens existing job files
 func (gr *Grunt) OpenJobs() {
-	gr.Active.OpenCSV("jobs.active", etable.Comma)
-	gr.Done.OpenCSV("jobs.done", etable.Comma)
-	gr.Archive.OpenCSV("jobs.archive", etable.Comma)
-	gr.Delete.OpenCSV("jobs.delete", etable.Comma)
+	jobfiles := []string{"jobs.active", "jobs.done", "jobs.archive", "jobs.delete"}
+	for i, tb := range gr.Tables {
+		tb.Table.OpenCSV(gi.FileName(jobfiles[i]), etable.Comma)
+	}
 }
 
 // OpenServer reads current server setting for project
@@ -138,10 +161,10 @@ func (gr *Grunt) SetServer() error {
 
 // UpdateViews updates the table views
 func (gr *Grunt) UpdateViews() {
-	gr.ActView.UpdateTable()
-	gr.DoneView.UpdateTable()
-	gr.ArchiveView.UpdateTable()
-	gr.DeleteView.UpdateTable()
+	for _, tb := range gr.Tables {
+		gr.SetSels(tb.View, tb.Sels)
+		tb.View.UpdateTable()
+	}
 }
 
 // Pull is the main update -- does pull, opens jobs and updates views, under lock
@@ -161,6 +184,7 @@ func (gr *Grunt) PullLocked() {
 	out, _ := gr.RunGruntCmd("pull", nil)
 	gr.OutBuf.SetText(out)
 
+	gr.SaveSels()
 	gr.OpenJobs()
 	gr.UpdateViews()
 }
@@ -269,8 +293,8 @@ func (gr *Grunt) RunGruntUpdt(grcmd string, args []string) ([]byte, error) {
 
 // Status pings server for current job status
 func (gr *Grunt) Status() {
-	av := gr.ActiveView()
-	if av == gr.ActView || av == nil {
+	av, an := gr.ActiveView()
+	if an == Active || av == nil {
 		gr.RunGruntUpdt("status", nil)
 	} else {
 		gr.RunGruntUpdt("status", gr.SelectedJobs(false))
@@ -279,8 +303,8 @@ func (gr *Grunt) Status() {
 
 // Results pings server for current job results
 func (gr *Grunt) Results() {
-	av := gr.ActiveView()
-	if av == gr.ActView || av == nil {
+	av, an := gr.ActiveView()
+	if an == Active || av == nil {
 		gr.RunGruntUpdt("results", nil)
 	} else {
 		gr.RunGruntUpdt("results", gr.SelectedJobs(false))
@@ -296,7 +320,7 @@ func (gr *Grunt) OpenResults(fileContains, ext string) {
 	if len(jobs) == 0 {
 		return
 	}
-	avw := gr.ActiveView()
+	avw, _ := gr.ActiveView()
 	if avw == nil {
 		gr.StatusMsg("Could not get jobs -- no job views visible")
 		return
@@ -548,11 +572,17 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 	if gr.ResView.IsVisible() {
 		return gr.SelectedJobsResults(need)
 	}
-	avw := gr.ActiveView()
+	avw, _ := gr.ActiveView()
 	if avw == nil {
 		gr.StatusMsg("Could not get jobs -- no job views visible")
 		return nil
 	}
+	return gr.SelectedJobsView(avw, need)
+}
+
+// SelectedJobsView returns the currently-selected list of jobs
+// from given view
+func (gr *Grunt) SelectedJobsView(avw *etview.TableView, need bool) []string {
 	sel := avw.SelectedIdxsList(false) // ascending
 	ns := len(sel)
 	if ns == 0 {
@@ -577,9 +607,22 @@ func (gr *Grunt) SelectedJobs(need bool) []string {
 	return jobs
 }
 
+// SetSels sets the selected items based on current rows of jobs
+// this updates selections across table updates
+func (gr *Grunt) SetSels(avw *etview.TableView, sels []string) {
+	avw.ResetSelectedIdxs()
+	dt := avw.Table.Table
+	for _, sl := range sels {
+		rws := dt.RowsByString("JobId", sl, false, false)
+		if len(rws) == 1 {
+			avw.SelectedIdxs[rws[0]] = struct{}{}
+		}
+	}
+}
+
 // JobField returns field value of given name for given job id in ActiveView
 func (gr *Grunt) JobField(job, field string) string {
-	avw := gr.ActiveView()
+	avw, _ := gr.ActiveView()
 	if avw == nil {
 		gr.StatusMsg(`<span style="color:red">Error: no active view selected!</span>`)
 		return ""
@@ -618,18 +661,13 @@ func (gr *Grunt) SelectedJobsResults(need bool) []string {
 	return jobs
 }
 
-func (gr *Grunt) ActiveView() *etview.TableView {
-	switch {
-	case gr.ActView.IsVisible():
-		return gr.ActView
-	case gr.DoneView.IsVisible():
-		return gr.DoneView
-	case gr.ArchiveView.IsVisible():
-		return gr.ArchiveView
-	case gr.DeleteView.IsVisible():
-		return gr.DeleteView
+func (gr *Grunt) ActiveView() (*etview.TableView, Tables) {
+	for i, tb := range gr.Tables {
+		if tb.View.IsVisible() {
+			return tb.View, Tables(i)
+		}
 	}
-	return nil
+	return nil, TablesN
 }
 
 // StatusMsg displays current status / command being executed, etc
@@ -700,21 +738,11 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.StatLabel.SetStretchMaxWidth()
 	gr.StatLabel.Redrawable = true
 
-	gr.ActView = tv.AddNewTab(etview.KiT_TableView, "Active").(*etview.TableView)
-	gr.ConfigTableView(gr.ActView)
-	gr.ActView.SetTable(gr.Active, nil)
-
-	gr.DoneView = tv.AddNewTab(etview.KiT_TableView, "Done").(*etview.TableView)
-	gr.ConfigTableView(gr.DoneView)
-	gr.DoneView.SetTable(gr.Done, nil)
-
-	gr.ArchiveView = tv.AddNewTab(etview.KiT_TableView, "Archive").(*etview.TableView)
-	gr.ConfigTableView(gr.ArchiveView)
-	gr.ArchiveView.SetTable(gr.Archive, nil)
-
-	gr.DeleteView = tv.AddNewTab(etview.KiT_TableView, "Delete").(*etview.TableView)
-	gr.ConfigTableView(gr.DeleteView)
-	gr.DeleteView.SetTable(gr.Delete, nil)
+	for i, tb := range gr.Tables {
+		tb.View = tv.AddNewTab(etview.KiT_TableView, Tables(i).String()).(*etview.TableView)
+		gr.ConfigTableView(tb.View)
+		tb.View.SetTable(tb.Table, nil)
+	}
 
 	prv := tv.AddNewTab(giv.KiT_StructView, "Params").(*giv.StructView)
 	prv.SetStretchMax()

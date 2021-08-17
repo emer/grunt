@@ -337,9 +337,14 @@ As usual, Microsoft Windows is different -- here's some tips for configuring the
 
 * Install `python` and `git` from standard sources (todo: where to get?)
 
+* Make sure that `C:\GoModules\bin` is on your `PATH` variable, so that the `grunti` program is available just by typing `grunti` -- `go install` will install in that path.
+
+    + Open `Control Panel`, search for `env`, click on the option to edit system environment variables, edit the `Path` variable, and ensure that the above path is on it (assuming Go is using that path).
+
 * Create a `grunt.bat` file in a location on your `PATH` where executable files can be found, replacing the paths here with those where your relevant code was installed:
 
 ```bat
 "C:\Program Files\Python37\python" C:\GoModules\src\github.com\emer\grunt\grunt.py %*
 ```
+
 
