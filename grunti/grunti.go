@@ -161,9 +161,12 @@ func (gr *Grunt) SetServer() error {
 
 // UpdateViews updates the table views
 func (gr *Grunt) UpdateViews() {
+	wupdt := gr.Win.UpdateStart()
+	defer gr.Win.UpdateEnd(wupdt)
+
 	for _, tb := range gr.Tables {
-		gr.SetSels(tb.View, tb.Sels)
 		tb.View.UpdateTable()
+		gr.SetSels(tb.View, tb.Sels)
 	}
 }
 
@@ -610,14 +613,15 @@ func (gr *Grunt) SelectedJobsView(avw *etview.TableView, need bool) []string {
 // SetSels sets the selected items based on current rows of jobs
 // this updates selections across table updates
 func (gr *Grunt) SetSels(avw *etview.TableView, sels []string) {
-	avw.ResetSelectedIdxs()
-	dt := avw.Table.Table
+	avw.UnselectAllIdxs()
+	ix := avw.Table // updated sorted index view
 	for _, sl := range sels {
-		rws := dt.RowsByString("JobId", sl, false, false)
+		rws := ix.RowsByString("JobId", sl, false, false)
 		if len(rws) == 1 {
-			avw.SelectedIdxs[rws[0]] = struct{}{}
+			avw.SelectIdx(rws[0])
 		}
 	}
+
 }
 
 // JobField returns field value of given name for given job id in ActiveView
