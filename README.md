@@ -341,7 +341,11 @@ As usual, Microsoft Windows is different -- here's some tips for configuring the
 
 * Install `git` from here: https://git-scm.com/download/win
 
-* Install `python3` from the Store: search for `python3` and select the most recent stable version (e.g., Python 3.9).
+* Install `python3` from the Store: search for `python3` and select the most recent stable version (e.g., Python 3.9).  Then install gitpython package in python, using this command in powershell:
+
+```bash
+$ pip3 install gitpython
+```
 
 * Build `grunti` (e.g., `go build` in `grunti` directory) -- assuming that works, then do `go install` to install it into the go `bin` path -- in powershell, you can just type `which grunti` to see where that is -- if nothing comes up then probably that location is not on your path, in which case you need to add it.  Here's information about Go paths: https://pkg.go.dev/cmd/go#hdr-GOPATH_environment_variable -- we'll refer to the `GOPATH/bin` path as `GOBIN` from here on out.
 
@@ -355,7 +359,4 @@ As usual, Microsoft Windows is different -- here's some tips for configuring the
 
 * Test your `grunt` command by going to your project directory where you want to run simulations, and type `grunt` -- it should give you the standard usage info.  If not, you may encounter for example an error in the paths, or perhaps you haven't installed the `git` module:
 
-```bash
-$ pip3 install gitpython
-```
 
