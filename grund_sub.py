@@ -85,7 +85,6 @@ def get_command(job_file):
     grunt_jobid = os.path.split(os.path.split(grunt_jobdir)[0])[1]
     if len(grunt_jobid) == 9:
         jobnum = int(grunt_jobid[3:])
-        print(jobnum, grunt_max_jobnum)
         if jobnum > grunt_max_jobnum:
             grunt_max_jobnum = jobnum
             write_max_jobnum()
