@@ -40,6 +40,9 @@ grunt_jobid = ""
 # set by master update loop
 grunt_job = ""
 
+# grunt_max_jobnum is the current max jobid number -- highest one processed
+grunt_max_jobnum = 0
+
 # grunt_jobdir is current job directory relative to grunt_jobs
 # e.g., active/jobid/projname
 # set by get_command
@@ -69,7 +72,7 @@ cur_commit_hash = ""
 # get_command gets job file paths based on a job_file which is relative to project 
 # returns True if is a valid command file, otherwise False
 def get_command(job_file):
-    global grunt_jobdir, grunt_jobpath, grunt_jobid, grunt_jobfnm, grunt_cmd
+    global grunt_jobdir, grunt_jobpath, grunt_jobid, grunt_jobfnm, grunt_cmd, grunt_max_jobnum
     file_split = os.path.split(job_file)
     fnm = file_split[1]
     prefix = "grcmd."
@@ -80,6 +83,10 @@ def get_command(job_file):
     grunt_jobdir = file_split[0]
     grunt_jobpath = os.path.join(grunt_jobs, grunt_jobdir)
     grunt_jobid = os.path.split(grunt_jobdir)[1]
+    jobnum = int(grunt_jobid[3:])
+    if jobnum > grunt_max_jobnum:
+        grunt_max_jobnum = jobnum
+        write_max_jobnum()
     return True
 
 def write_csv(fnm, header, data):
@@ -310,6 +317,7 @@ def commit_jobs():
     jstat = os.path.join(grunt_jobs, "grund_status.txt")
     write_status(jstat)
     grunt_jobs_repo.git.add(jstat)
+    grunt_jobs_repo.git.add(os.path.join(grunt_jobs, "maxjob.id"))
     grunt_jobs_repo.index.commit("GRUND: processed from: " + last_commit_done_hash + " to: " + cur_commit_hash)
     grunt_jobs_repo.remotes.origin.push()
     
@@ -320,6 +328,23 @@ def commit_results():
     grunt_results_repo.index.commit("GRUND: processed from: " + last_commit_done_hash + " to: " + cur_commit_hash)
     grunt_results_repo.remotes.origin.push()
 
+def cur_max_jobnum():
+    global grunt_max_jobnum
+    jf = "maxjob.id"
+    pjf = os.path.join(grunt_jobs, jf)
+    if os.path.isfile(pjf):
+        with open(pjf, "r+") as f:
+            grunt_max_jobnum = int(f.readline())
+            # f.seek(0)
+            # f.write(str(grunt_jobnum + 1) + "\n")
+    
+def write_max_jobnum():
+    jf = "maxjob.id"
+    pjf = os.path.join(grunt_jobs, jf)
+    if os.path.isfile(pjf):
+        with open(pjf, "w") as f:
+            f.write(str(grunt_max_jobnum) + "\n")
+    
 ###################################################################
 #  starts running here    
     
@@ -365,6 +390,7 @@ if os.path.isfile(grunt_jobs_shafn):
     cur_commit_hash = str(grunt_jobs_repo.heads.master.commit)
     with open(grunt_jobs_shafn, "w") as f:
         f.write(cur_commit_hash)
+    cur_max_jobnum()
     check_for_updates = True
     com_jobs = False
     com_results = False

@@ -15,7 +15,7 @@ Start server daemon:
 $ nohup python3 grund.py &
 ```
 
-Monitor output:
+Monitor server output:
 ```bash
 $ tail -f nohup.out
 ```
