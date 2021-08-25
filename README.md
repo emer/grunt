@@ -335,16 +335,27 @@ myproj
 
 As usual, Microsoft Windows is different -- here's some tips for configuring the client to work on windows.
 
-* Install `python` and `git` from standard sources (todo: where to get?)
+* Open the `Microsoft Store` app - type `store` in the windows taskbar search prompt, open the app.
 
-* Make sure that `C:\GoModules\bin` is on your `PATH` variable, so that the `grunti` program is available just by typing `grunti` -- `go install` will install in that path.
+* First, strongly recommend using the `PowerShell`-- search for that in the Store and install it -- this provides a much better command-line interface than the standard Command Prompt.
 
-    + Open `Control Panel`, search for `env`, click on the option to edit system environment variables, edit the `Path` variable, and ensure that the above path is on it (assuming Go is using that path).
+* Install `git` from here: https://git-scm.com/download/win
 
-* Create a `grunt.bat` file in a location on your `PATH` where executable files can be found, replacing the paths here with those where your relevant code was installed:
+* Install `python3` from the Store: search for `python3` and select the most recent stable version (e.g., Python 3.9).
+
+* Build `grunti` (e.g., `go build` in `grunti` directory) -- assuming that works, then do `go install` to install it into the go `bin` path -- in powershell, you can just type `which grunti` to see where that is -- if nothing comes up then probably that location is not on your path, in which case you need to add it.  Here's information about Go paths: https://pkg.go.dev/cmd/go#hdr-GOPATH_environment_variable -- we'll refer to the `GOPATH/bin` path as `GOBIN` from here on out.
+
+    + Open `Control Panel`, search for `env`, click on the option to edit system environment variables, edit the `Path` variable, and ensure that the appropriate `GOBIN` path is on it.
+
+* Create a `grunt.bat` file in the `GOBIN` path, replacing the paths here with those where your relevant programs are located -- e.g., use `which python3` to find where that is, and the location where you have the `emer\grunt` code:
 
 ```bat
 "C:\Program Files\Python37\python" C:\GoModules\src\github.com\emer\grunt\grunt.py %*
 ```
 
+* Test your `grunt` command by going to your project directory where you want to run simulations, and type `grunt` -- it should give you the standard usage info.  If not, you may encounter for example an error in the paths, or perhaps you haven't installed the `git` module:
+
+```bash
+$ pip3 install gitpython
+```
 

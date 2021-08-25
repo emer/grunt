@@ -7,6 +7,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,6 +38,16 @@ func main() {
 }
 
 func guirun() {
+	path := ""
+	flag.StringVar(&path, "path", "", "starting path -- defaults to current path")
+	flag.Parse()
+	if path != "" {
+		err := os.Chdir(path)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	win := TheGrunt.Config()
 	win.StartEventLoop()
 }
