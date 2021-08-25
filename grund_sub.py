@@ -319,7 +319,10 @@ def commit_jobs():
     jstat = os.path.join(grunt_jobs, "grund_status.txt")
     write_status(jstat)
     grunt_jobs_repo.git.add(jstat)
-    grunt_jobs_repo.git.add(os.path.join(grunt_jobs, "maxjob.id"))
+    jf = "maxjob.id"
+    pjf = os.path.join(grunt_jobs, jf)
+    if os.path.isfile(pjf):
+        grunt_jobs_repo.git.add(pjf)
     grunt_jobs_repo.index.commit("GRUND: processed from: " + last_commit_done_hash + " to: " + cur_commit_hash)
     grunt_jobs_repo.remotes.origin.push()
     
@@ -337,8 +340,6 @@ def cur_max_jobnum():
     if os.path.isfile(pjf):
         with open(pjf, "r+") as f:
             grunt_max_jobnum = int(f.readline())
-            # f.seek(0)
-            # f.write(str(grunt_jobnum + 1) + "\n")
     
 def write_max_jobnum():
     jf = "maxjob.id"

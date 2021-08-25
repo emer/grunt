@@ -49,6 +49,9 @@ grunt_cwd = os.path.split(os.getcwd())
 # grunt_proj is current project name = subir name of cwd
 grunt_proj = grunt_cwd[-1]
 
+# grunt_jobs is the jobs git working dir for project: ~/gruntdat/wc/server/username/projname/jobs
+grunt_jobs = ""
+
 # grunt_jobid is the current jobid code: userid + jobnum
 grunt_jobid = ""
 
@@ -135,7 +138,7 @@ def get_newproj_server(on_server):
 def init_servers():
     get_projname()  # allow override with grunt.projname file
     wc = os.path.join(grunt_root, "wc")
-    global grunt_proj_dir
+    global grunt_proj_dir, grunt_jobs
     grunt_proj_dir = os.path.join(grunt_root, "projs", grunt_proj)
     if not os.path.isdir(grunt_proj_dir):
         oldroot = os.path.join(str(Path.home()), "grunt")
@@ -153,6 +156,8 @@ def init_servers():
         srv = Server(f)
         grunt_servers[f] = srv
         maxjob = max(maxjob, srv.old_jobnum)
+        if len(grunt_jobs) == 0:
+            grunt_jobs = os.path.join(swc, "jobs")
         
     # legacy: get nextjob from server, now stored in projs directory
     jf = "nextjob.id"
@@ -226,17 +231,29 @@ def get_projname():
     if open_projname(cf):
         print("using alt projname: " + grunt_proj + " from: " + cf)
 
+def cur_max_jobnum():
+    jf = "maxjob.id"
+    pjf = os.path.join(grunt_jobs, jf)
+    maxjob = 0
+    if os.path.isfile(pjf):
+        with open(pjf, "r+") as f:
+            maxjob = int(f.readline())
+    return maxjob
+        
 def new_jobid():
     global grunt_jobnum, grunt_jobid
+    maxjob = cur_max_jobnum()
     jf = "nextjob.id"
     pjf = os.path.join(grunt_proj_dir, jf)
     if os.path.isfile(pjf):
         with open(pjf, "r+") as f:
             grunt_jobnum = int(f.readline())
+            if grunt_jobnum < maxjob:
+                grunt_jobnum = maxjob + 1
             f.seek(0)
             f.write(str(grunt_jobnum + 1) + "\n")
     else:
-        grunt_jobnum = 1
+        grunt_jobnum = maxjob + 1
         with open(pjf, "w") as f:
             f.write(str(grunt_jobnum + 1) + "\n")
     grunt_jobid = grunt_userid + str(int(grunt_jobnum)).zfill(6)
