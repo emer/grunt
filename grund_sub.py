@@ -82,11 +82,13 @@ def get_command(job_file):
     grunt_cmd = fnm[len(prefix):]
     grunt_jobdir = file_split[0]
     grunt_jobpath = os.path.join(grunt_jobs, grunt_jobdir)
-    grunt_jobid = os.path.split(grunt_jobdir)[1]
-    jobnum = int(grunt_jobid[3:])
-    if jobnum > grunt_max_jobnum:
-        grunt_max_jobnum = jobnum
-        write_max_jobnum()
+    grunt_jobid = os.path.split(os.path.split(grunt_jobdir)[0])[1]
+    if len(grunt_jobid) == 9:
+        jobnum = int(grunt_jobid[3:])
+        print(jobnum, grunt_max_jobnum)
+        if jobnum > grunt_max_jobnum:
+            grunt_max_jobnum = jobnum
+            write_max_jobnum()
     return True
 
 def write_csv(fnm, header, data):
@@ -341,9 +343,8 @@ def cur_max_jobnum():
 def write_max_jobnum():
     jf = "maxjob.id"
     pjf = os.path.join(grunt_jobs, jf)
-    if os.path.isfile(pjf):
-        with open(pjf, "w") as f:
-            f.write(str(grunt_max_jobnum) + "\n")
+    with open(pjf, "w") as f:
+        f.write(str(grunt_max_jobnum) + "\n")
     
 ###################################################################
 #  starts running here    
