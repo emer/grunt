@@ -15,7 +15,7 @@ tail:
 
 	
 # NOTE: MUST update version number here prior to running 'make release'
-VERS=v1.0.6
+VERS=v1.0.7
 PACKAGE=grunt
 GIT_COMMIT=`git rev-parse --short HEAD`
 VERS_DATE=`date -u +%Y-%m-%d\ %H:%M`
