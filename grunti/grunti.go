@@ -42,6 +42,7 @@ func guirun() {
 	flag.StringVar(&path, "path", "", "starting path -- defaults to current path")
 	flag.Parse()
 	if path != "" {
+		fmt.Printf("opening path: %s\n", path)
 		err := os.Chdir(path)
 		if err != nil {
 			fmt.Println(err)
