@@ -335,13 +335,17 @@ myproj
 
 As usual, Microsoft Windows is different -- here's some tips for configuring the client to work on windows.
 
-* Open the `Microsoft Store` app - type `store` in the windows taskbar search prompt, open the app.
-
-* First, strongly recommend using the `PowerShell`-- search for that in the Store and install it -- this provides a much better command-line interface than the standard Command Prompt.
+* First, strongly recommend using the `PowerShell`-- search for that in the  `Microsoft Store` app -- type `store` in the windows taskbar search prompt -- this provides a much better command-line interface than the standard Command Prompt.
 
 * Install `git` from here: https://git-scm.com/download/win
 
-* Install `python3` from the Store: search for `python3` and select the most recent stable version (e.g., Python 3.9).  Then install gitpython package in python, using this command in powershell:
+* Install Python from the main Python distribution: https://www.python.org/downloads/windows/ -- *do not under any circumstances install from the Microsoft Store app!* while that is very convenient, it creates symbolic links to access the python executables, which is incompatible with go exec.Command, preventing use of `gopy`.
+
+    The standard python install does not create a `python3.exe` which grunt looks for -- follow instructions here:
+https://stackoverflow.com/questions/39910730/python3-is-not-recognized-as-an-internal-or-external-command-operable-program/41492852
+(just make a copy of python.exe to python3.exe in the relevant installed location).
+
+* Then install gitpython package in python, using this command in powershell:
 
 ```bash
 $ pip3 install gitpython
