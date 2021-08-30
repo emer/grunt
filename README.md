@@ -361,6 +361,6 @@ $ pip3 install gitpython
 "C:\Program Files\Python37\python" C:\GoModules\src\github.com\emer\grunt\grunt.py %*
 ```
 
-* Test your `grunt` command by going to your project directory where you want to run simulations, and type `grunt` -- it should give you the standard usage info.  If not, you may encounter for example an error in the paths, or perhaps you haven't installed the `git` module:
+* Test your `grunt` command by going to your project directory where you want to run simulations, and type `grunt` -- it should give you the standard usage info.  If not, you may encounter for example an error in the paths, or perhaps you haven't installed the `git` module.
 
 
