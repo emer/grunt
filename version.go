@@ -3,8 +3,7 @@
 package grunt
 
 const (
-	Version     = "v1.0.7"
-	GitCommit   = "9666ca7" // the commit JUST BEFORE the release
-	VersionDate = "2021-08-26 19:29" // UTC
+	Version     = "v1.0.8"
+	GitCommit   = "5c84d45"          // the commit JUST BEFORE the release
+	VersionDate = "2021-10-22 09:41" // UTC
 )
-

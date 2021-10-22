@@ -156,7 +156,7 @@ def write_sbatch():
     # f.write("#SBATCH --export=NONE\n")
     # f.write("unset SLURM_EXPORT_ENV\n")
     f.write("\n\n")
-    f.write("go build\n")  # add anything here needed to prepare code
+    f.write("go build -mod=mod\n")  # add anything here needed to prepare code
     f.write("date -u '+%Y-%m-%d %T %Z' > job.start\n")
     f.write("srun ./" + grunt_proj + " --nogui " + args + "\n")
     f.write("date -u '+%Y-%m-%d %T %Z' > job.end\n")
