@@ -384,16 +384,6 @@ func (gr *Grunt) PlotResults() {
 			sel = append(sel, i)
 		}
 	}
-	//if len(sel) == 1 {
-	//	dt := gr.ResList[sel[0]].Table
-	//	if dt == nil {
-	//		gr.StatusMsg("Plot: nil table")
-	//		return
-	//	}
-	//	//gr.Plot.Params.LegendCol = ""
-	//	gr.Plot.Params.LegendCol = "JobId"
-	//	gr.Plot.SetTable(dt)
-	//} else {
 	gr.AggRes = nil // reset
 	for _, ri := range sel {
 		if ri >= len(gr.ResList) {
@@ -413,7 +403,6 @@ func (gr *Grunt) PlotResults() {
 	}
 	gr.Plot.Params.LegendCol = "JobId"
 	gr.Plot.SetTable(gr.AggRes)
-	//}
 	// if gr.Plot.Params.XAxisCol == "" {
 	// 	gr.Plot.Params.XAxisCol = gr.Params.XAxis
 	// }
