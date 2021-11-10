@@ -67,5 +67,5 @@ gopath-update:
 	cd examples/ra25; go get -u ./...
 	
 release:
-	$(MAKE) -C etorch release
+	$(MAKE) -C ../ release
 

@@ -187,7 +187,7 @@ def write_sbatch_setup():
     ####### This is custom to the job you are running
 
     f.write("date -u '+%Y-%m-%d %T %Z' > job.start\n")
-    f.write("go build\n")  # add anything here needed to prepare code. This part will only be executed by the first array job
+    f.write("go build -mod=mod\n")  # add anything here needed to prepare code. This part will only be executed by the first array job
 
     f.flush()
     f.close()
