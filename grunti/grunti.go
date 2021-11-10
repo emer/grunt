@@ -384,35 +384,36 @@ func (gr *Grunt) PlotResults() {
 			sel = append(sel, i)
 		}
 	}
-	if len(sel) == 1 {
-		dt := gr.ResList[sel[0]].Table
+	//if len(sel) == 1 {
+	//	dt := gr.ResList[sel[0]].Table
+	//	if dt == nil {
+	//		gr.StatusMsg("Plot: nil table")
+	//		return
+	//	}
+	//	//gr.Plot.Params.LegendCol = ""
+	//	gr.Plot.Params.LegendCol = "JobId"
+	//	gr.Plot.SetTable(dt)
+	//} else {
+	gr.AggRes = nil // reset
+	for _, ri := range sel {
+		if ri >= len(gr.ResList) {
+			continue
+		}
+		r := gr.ResList[ri]
+		// fmt.Printf("job: %d  %s\n", i, r.JobId)
+		dt := r.TableWithJobId()
 		if dt == nil {
-			gr.StatusMsg("Plot: nil table")
-			return
+			continue
 		}
-		gr.Plot.Params.LegendCol = ""
-		gr.Plot.SetTable(dt)
-	} else {
-		gr.AggRes = nil // reset
-		for _, ri := range sel {
-			if ri >= len(gr.ResList) {
-				continue
-			}
-			r := gr.ResList[ri]
-			// fmt.Printf("job: %d  %s\n", i, r.JobId)
-			dt := r.TableWithJobId()
-			if dt == nil {
-				continue
-			}
-			if gr.AggRes == nil {
-				gr.AggRes = dt
-			} else {
-				gr.AggRes.AppendRows(dt)
-			}
+		if gr.AggRes == nil {
+			gr.AggRes = dt
+		} else {
+			gr.AggRes.AppendRows(dt)
 		}
-		gr.Plot.Params.LegendCol = "JobId"
-		gr.Plot.SetTable(gr.AggRes)
 	}
+	gr.Plot.Params.LegendCol = "JobId"
+	gr.Plot.SetTable(gr.AggRes)
+	//}
 	// if gr.Plot.Params.XAxisCol == "" {
 	// 	gr.Plot.Params.XAxisCol = gr.Params.XAxis
 	// }
@@ -725,8 +726,9 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.RunGruntCmd("jobs", nil)
 	gr.OpenServer()
 	gr.OpenJobs()
-	cwd, _ := os.Getwd()
-	gr.DirName = giv.DirAndFile(cwd)
+	//cwd, _ := os.Getwd()
+	//gr.DirName = giv.DirAndFile(cwd)
+	gr.DirName = giv.DirAndFile("/Users/rohrlich/ccnlab/lang-acq/sims/altnet")
 
 	width := 1600
 	height := 1200
