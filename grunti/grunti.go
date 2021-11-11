@@ -715,9 +715,8 @@ func (gr *Grunt) Config() *gi.Window {
 	gr.RunGruntCmd("jobs", nil)
 	gr.OpenServer()
 	gr.OpenJobs()
-	//cwd, _ := os.Getwd()
-	//gr.DirName = giv.DirAndFile(cwd)
-	gr.DirName = giv.DirAndFile("/Users/rohrlich/ccnlab/lang-acq/sims/altnet")
+	cwd, _ := os.Getwd()
+	gr.DirName = giv.DirAndFile(cwd)
 
 	width := 1600
 	height := 1200
