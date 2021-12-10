@@ -113,7 +113,7 @@ newproj-server	 <projname> 	 calls: newproj projname on server -- use in existin
 # Overview
 
 * There are different **projects**, which are typically named by the name of the current working directory on your laptop (*client*) where you run the `grunt` commands -- these have the code you want to run on the *server*.  These projects can be anywhere, but the code you want to run *must be added to a git repository* (e.g., hosted on `github.com` or anywhere) -- the list of files copied up to the server is provided by the git list for the current directory.  This allows misc other temp result, doc, etc files to exist in the directory.  It also means that you should put any other files that are not essential for running the simulation in other directories.
-    + If you have a `grunt.projnm` file in the current dir, its contents determines the project name instead.
+    + If you have a `grunt.projname` file in the current dir, its contents determines the project name instead.
 
 * Each project has its own grunt git repositories ( *entirely separate from your "local" e.g., github repository* ), on the server and client, and the client configures the server's bare repositories as the ssh remote origin for the local working copies.  Repositories on server live under `~/gruntsrv/` and client on `~/gruntdat/` -- *do not put this grunt code in those locations!* -- we recommend `~/emer/grunt`.  There are two repositories per project:
     + `jobs` contains all the job running and status files.  On the server, it is also where results are typically saved (log files etc), but they are not added to git.
@@ -266,7 +266,7 @@ Take some time to read over the script -- the top has the key variables that you
 
 You will have to read your server's documentation and edit the python code to generate an appropriate `sbatch` submission script depending on details of your server.  The example `grunter.py` file contains some tips and options that work across the two servers we use.
 
-You can have the script `cd` into a subdirectory and run a project from there, to support multiple different executables or variations in the same repository, but *always run grunt from the root of the project* because it gets the project name from the directory name (and even if you put `grunt.projnm` in the subdirectory to fix that issue, the jobs.* files etc will not be coordinated if you run grunt from different directories -- it might work but could get confusing at least).
+You can have the script `cd` into a subdirectory and run a project from there, to support multiple different executables or variations in the same repository, but *always run grunt from the root of the project* because it gets the project name from the directory name (and even if you put `grunt.projname` in the subdirectory to fix that issue, the jobs.* files etc will not be coordinated if you run grunt from different directories -- it might work but could get confusing at least).
 
 Also, if there are any "external" resources that your job needs (e.g., large shared databases of image files), you should just write a command in your sbatch script to make a symbolic link to the relevant directory ( *on the server* ), and then have your project refer "locally" to that symlinked directory -- you can also manually create the same symlink on your client, so the code will run the same in both places, and others can use it too, without baking in a specific path in the code.
 
