@@ -237,6 +237,7 @@ def write_sbatch_cleanup(array_id):
     f.close()
 
 def sbatch_submit(sbatch_fn):
+    result = ""
     try:
         result = subprocess.check_output(["sbatch",sbatch_fn])
     except subprocess.CalledProcessError:
