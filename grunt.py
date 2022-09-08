@@ -1300,7 +1300,9 @@ else:
         if jr is None:
             print("skipping non-active job: %s" % (jb))
             continue
-        ts = grunt_servers[jr[1]]
+        sname = jr[1]
+        ts = grunt_servers[sname]
+        slist[sname] = ts
         ts.write_cmd(grunt_jobid, cmd, timestamp())
     for sname, ts in slist.items():
         ts.commit_cmd(cmd)
