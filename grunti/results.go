@@ -16,10 +16,18 @@ import (
 
 // Result has info for one loaded result, in form of an etable.Table
 type Result struct {
-	JobId   string        `inactive:"+" desc:"job id for results"`
-	Message string        `inactive:"+" width:"80" desc:"description of job"`
-	Path    string        `inactive:"+" width:"60" desc:"path to data"`
-	Table   *etable.Table `desc:"result data"`
+
+	// job id for results
+	JobId string `inactive:"+" desc:"job id for results"`
+
+	// description of job
+	Message string `inactive:"+" width:"80" desc:"description of job"`
+
+	// path to data
+	Path string `inactive:"+" width:"60" desc:"path to data"`
+
+	// result data
+	Table *etable.Table `desc:"result data"`
 }
 
 // OpenCSV opens data of generic CSV format (any delim, auto-detected)

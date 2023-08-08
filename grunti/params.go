@@ -17,13 +17,27 @@ import (
 
 // Params are localized settings for each project
 type Params struct {
-	Plot            eplot.PlotParams `desc:"default parameters for plotting"`
-	DefRange        minmax.Range64   `desc:"default Range params for plot columns"`
-	UpdtTotalSec    int              `desc:"total number of seconds for auto-update after each action"`
-	UpdtIntervalSec int              `desc:"number of seconds to wait between auto-updates"`
-	SubmitArgs      string           `desc:"default Args for Submit -- is auto-updated and saved for each submit"`
-	SubmitMsg       string           `desc:"last message for Submit -- is auto-updated and saved for each submit"`
-	OpenResultsCont string           `desc:"default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open..."`
+
+	// default parameters for plotting
+	Plot eplot.PlotParams `desc:"default parameters for plotting"`
+
+	// default Range params for plot columns
+	DefRange minmax.Range64 `desc:"default Range params for plot columns"`
+
+	// total number of seconds for auto-update after each action
+	UpdtTotalSec int `desc:"total number of seconds for auto-update after each action"`
+
+	// number of seconds to wait between auto-updates
+	UpdtIntervalSec int `desc:"number of seconds to wait between auto-updates"`
+
+	// default Args for Submit -- is auto-updated and saved for each submit
+	SubmitArgs string `desc:"default Args for Submit -- is auto-updated and saved for each submit"`
+
+	// last message for Submit -- is auto-updated and saved for each submit
+	SubmitMsg string `desc:"last message for Submit -- is auto-updated and saved for each submit"`
+
+	// default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open...
+	OpenResultsCont string `desc:"default for what the file name should contain for OpenResults -- is auto-updated and saved for each Open..."`
 }
 
 var KiT_Params = kit.Types.AddType(&Params{}, ParamsProps)

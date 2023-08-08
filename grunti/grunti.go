@@ -55,9 +55,15 @@ func guirun() {
 
 // Table contains all the info for one table of job info
 type Table struct {
-	Table *etable.Table     `desc:"jobs table"`
-	View  *etview.TableView `desc:"view of table"`
-	Sels  []string          `desc:"selected job ids in ascending order in view"`
+
+	// jobs table
+	Table *etable.Table `desc:"jobs table"`
+
+	// view of table
+	View *etview.TableView `desc:"view of table"`
+
+	// selected job ids in ascending order in view
+	Sels []string `desc:"selected job ids in ascending order in view"`
 }
 
 // Tables are different types / locations of random noise for activations
@@ -80,29 +86,72 @@ const (
 
 // Grunt interfaces with grunt commands
 type Grunt struct {
-	StatMsg string          `desc:"last status message"`
-	Server  string          `desc:"current server"`
-	Params  Params          `desc:"params per project, saved as grunti.pars"`
-	ResList Results         `desc:"list of loaded results"`
-	Tables  [TablesN]*Table `desc:"the jobs tables"`
-	OutView *giv.TextView   `desc:"text view"`
-	OutBuf  *giv.TextBuf    `desc:"text buf"`
-	ResView *giv.TableView  `desc:"results table"`
-	Plot    *eplot.Plot2D   `desc:"plot"`
-	AggRes  *etable.Table   `desc:"aggregated results from multiple"`
 
-	DirName   string        `view:"-" desc:"path/dir for current project"`
-	StatLabel *gi.Label     `view:"-" desc:"status label"`
-	Win       *gi.Window    `view:"-" desc:"main GUI window"`
-	ToolBar   *gi.ToolBar   `view:"-" desc:"the master toolbar"`
-	SrvField  *gi.TextField `view:"-" desc:"field for server"`
-	TabView   *gi.TabView   `view:"-" desc:"the tab view"`
-	CmdMu     sync.Mutex    `view:"-" desc:"command mutex"`
-	UpdtMu    sync.Mutex    `view:"-" desc:"update mutex"`
-	InUpdt    bool          `inactive:"+" desc:"true if currently in update loop"`
-	Timeout   time.Time     `view:"-" desc:"timout for auto updater"`
-	NextCmd   string        `view:"-" desc:"next command to run after current update has timed out"`
-	UpdtTick  *time.Ticker  `view:"-" desc:"update ticker"`
+	// last status message
+	StatMsg string `desc:"last status message"`
+
+	// current server
+	Server string `desc:"current server"`
+
+	// params per project, saved as grunti.pars
+	Params Params `desc:"params per project, saved as grunti.pars"`
+
+	// list of loaded results
+	ResList Results `desc:"list of loaded results"`
+
+	// the jobs tables
+	Tables [TablesN]*Table `desc:"the jobs tables"`
+
+	// text view
+	OutView *giv.TextView `desc:"text view"`
+
+	// text buf
+	OutBuf *giv.TextBuf `desc:"text buf"`
+
+	// results table
+	ResView *giv.TableView `desc:"results table"`
+
+	// plot
+	Plot *eplot.Plot2D `desc:"plot"`
+
+	// aggregated results from multiple
+	AggRes *etable.Table `desc:"aggregated results from multiple"`
+
+	// [view: -] path/dir for current project
+	DirName string `view:"-" desc:"path/dir for current project"`
+
+	// [view: -] status label
+	StatLabel *gi.Label `view:"-" desc:"status label"`
+
+	// [view: -] main GUI window
+	Win *gi.Window `view:"-" desc:"main GUI window"`
+
+	// [view: -] the master toolbar
+	ToolBar *gi.ToolBar `view:"-" desc:"the master toolbar"`
+
+	// [view: -] field for server
+	SrvField *gi.TextField `view:"-" desc:"field for server"`
+
+	// [view: -] the tab view
+	TabView *gi.TabView `view:"-" desc:"the tab view"`
+
+	// [view: -] command mutex
+	CmdMu sync.Mutex `view:"-" desc:"command mutex"`
+
+	// [view: -] update mutex
+	UpdtMu sync.Mutex `view:"-" desc:"update mutex"`
+
+	// true if currently in update loop
+	InUpdt bool `inactive:"+" desc:"true if currently in update loop"`
+
+	// [view: -] timout for auto updater
+	Timeout time.Time `view:"-" desc:"timout for auto updater"`
+
+	// [view: -] next command to run after current update has timed out
+	NextCmd string `view:"-" desc:"next command to run after current update has timed out"`
+
+	// [view: -] update ticker
+	UpdtTick *time.Ticker `view:"-" desc:"update ticker"`
 }
 
 var KiT_Grunt = kit.Types.AddType(&Grunt{}, GruntProps)
