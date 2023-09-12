@@ -3,9 +3,9 @@ module github.com/emer/grunt
 go 1.18
 
 require (
-	github.com/emer/etable v1.1.23
-	github.com/goki/gi v1.3.19
-	github.com/goki/ki v1.1.11
+	github.com/emer/etable v1.1.24
+	github.com/goki/gi v1.3.22
+	github.com/goki/ki v1.1.15
 )
 
 require (
@@ -40,7 +40,7 @@ require (
 	github.com/goki/pi v1.0.27 // indirect
 	github.com/goki/prof v1.0.0 // indirect
 	github.com/goki/vci v1.0.1 // indirect
-	github.com/goki/vgpu v1.0.27 // indirect
+	github.com/goki/vgpu v1.0.33 // indirect
 	github.com/goki/vulkan v1.0.6 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
